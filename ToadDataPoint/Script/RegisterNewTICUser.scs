@@ -1,0 +1,190 @@
+﻿///////////////////////////////////////////////////////////////////////////////////////
+//
+//  Unit Name     : RegisterNewTICUser
+//  Author        : Roy T.Burns(Royburns.Peng@software.dell.com)
+//  Create Date   : Oct 10, 2013
+//  Last Modify   : 
+//  Description   : Test Step -- Register New Toad Intelligence Central User.
+//
+//    All rights reserved by TDP Team.
+//
+///////////////////////////////////////////////////////////////////////////////////////
+
+//USEUNIT InitialEnv
+//USEUNIT Variable
+//USEUNIT Common
+//USEUNIT ExcelOperator
+//USEUNIT TDPCommon
+
+// variable
+var s_strFunctionPoint  = 'CreateConnections';
+var s_strTestConfig     = 'CreateConnections.xls'
+
+//-------------------------------------------------------------------------------------
+//Function Name : RegisterNewTICUser
+//Author        : Hugo He
+//Create Date   : Nov 11, 2013
+//Last Modify   : 
+//Description   : Register a new TIC user
+//Parameter     : nID in Excel
+//Return        : boolean
+//-------------------------------------------------------------------------------------
+function RegisterNewTICUser(nID)
+{
+    //Env variables
+    var strConfigFile   = g_strProjectTestConfig + "\\" + s_strFunctionPoint + "\\" + s_strTestConfig;
+    var strSheetName    = "RegisterNewTICUser";
+    var bReturn         = true;
+    var objDic          = new ActiveXObject("Scripting.Dictionary");
+    //Object variables
+    var connObj   =   null;
+    //Controls
+    var groupSelectionControl   =   null;
+    var tabControl              =   null;
+    var pnlNewUser              =   null;
+    //Excel data
+    var strNewUserName, strNewUserPwd, strNewUserFullName, strNewUserEmail, strNewUserHost, strNewUserPort, strConnName, bSavePwd;
+    
+    try
+    {
+        BeginLogFolder(arguments);
+        
+        InitialEnvMain();
+        ActivateMainWinForm();
+        Delay(1000);
+        ActivateMainWinForm();
+        Delay(1000);
+    
+        if(!nID || nID == 0)
+        {
+            throw new Error("nID is invalid.");
+        }
+        else if(GetDataFromExcelByID(strConfigFile, strSheetName, nID, objDic))
+        {
+            //Set values
+            strNewUserName      =   objDic["Item"]('UserName');
+            strNewUserPwd       =   objDic["Item"]('Password');
+            strNewUserFullName  =   objDic["Item"]('FullName');
+            strNewUserEmail     =   objDic["Item"]('Email');
+            strNewUserHost      =   objDic["Item"]('Host');
+            strNewUserPort      =   objDic["Item"]('Port');
+            strConnName         =   objDic["Item"]('ConnName');
+            bSavePwd            =   objDic["Item"]('SavePwd');
+            
+            //Check connection exists
+            connObj = GetConnection(strConnName);
+            if(connObj["Exists"])
+            {
+                Log["Message"]("The connection already exists!");
+            }
+            else
+            {
+                //Click create connection button
+                Aliases["TDP_toad"]["frmMainForm"]["DockPanel"]
+                        ["ControlContainer"]["AnalystBrowserControl"]
+                        ["connectionManagerControl1"]["connectionControl1"]
+                        ["BarDockControl"]["DockedBarControl"]["btnCreate"]["ClickButton"]();
+
+                groupSelectionControl = Aliases["TDP_toad"]["frmConnectionProperties"]["pnlConnectionProperties"]["pnlProviderTop"]["groupSelectionControl1"];
+                WaitingForObjectWithTime(groupSelectionControl, 5);
+                if(groupSelectionControl["Exists"] && groupSelectionControl["Enabled"])
+                {
+                    //Select TIC in combox
+                    //groupSelectionControl["Click"]();
+                    ClickTreeListItem(Aliases["TDP_toad"]["PopupContainerForm"]["PopupContainerControl"]["groupTree"], "Value", "Intelligence Central", 5);
+                
+                    //Select tab
+                    tabControl = Aliases["TDP_toad"]["frmConnectionProperties"]["pnlConnectionProperties"]["pnlControl"]
+                                  ["pnlTeamServerConnection"]["xtraTabControlAdvanced"];
+                    tabControl["ClickTab"]('Register New User');
+                
+                    //Set text
+                    pnlNewUser = tabControl["xtpNewUser"]["pnlNewUser"];
+                    pnlNewUser["tbxNewUserName"]["SetText"](strNewUserName);
+                    pnlNewUser["tbxNewUserPwd"]["SetText"](strNewUserPwd);
+                    pnlNewUser["tbxNewUserVerifyPwd"]["SetText"](strNewUserPwd);
+                    pnlNewUser["tbxNewUserFullName"]["SetText"](strNewUserFullName);
+                    pnlNewUser["tbxNewUserEmail"]["SetText"](strNewUserEmail);
+                    pnlNewUser["tbxNewUserHost"]["SetText"](strNewUserHost);
+                    pnlNewUser["tbxNewUserPort"]["SetTextCore"](strNewUserPort);
+                    pnlNewUser["tbxNewUserPort"]["Click"]();
+                    Sys["Keys"](strNewUserPort);
+                    pnlNewUser["tbxNewUserPort"]["Click"]();
+
+                    //Set connection name
+                    if(strConnName != undefined && strConnName != "")
+                    {
+                        Aliases["TDP_toad"]["frmConnectionProperties"]["pnlConnectionProperties"]
+                            ["pnlProviderBottom"]["btneName"]["SetText"](strConnName);
+                    }
+                    else
+                    {
+                        strConnName = strNewUserName+'@'+strNewUserHost;
+                    }
+                    Aliases["TDP_toad"]["frmConnectionProperties"]["pnlConnectionProperties"]
+                        ["pnlProviderBottom"]["cbxSavePassword"]["Checked"] = bSavePwd;
+                    Aliases["TDP_toad"]["frmConnectionProperties"]["btnConnect"]["ClickButton"]();
+                }
+            
+                //Wait create connection finish
+                for(var i=0; i<20; i++)
+                {
+                    if(Aliases["TDP_toad"]["frmMainForm"]["CanFocus"] || Aliases["TDP_toad"]["frmBaseModal"]["Exists"])
+                        break;
+                    Delay(1000);
+                }
+                if(Aliases["TDP_toad"]["frmMainForm"]["CanFocus"])   //TDP main form can be focus means register finish
+                {
+                    connObj = GetConnection(strConnName);
+                    if (connObj["Exists"])
+                    {
+                        Log["Message"]("Register new user success!");
+                    }
+                    else
+                    {
+                        throw new Error('Register new user finished, but connection does not exit!');
+                    }
+                }
+                else if(Aliases["TDP_toad"]["frmBaseModal"]["Exists"])   //If unexpected window occur
+                {
+                    throw new Error("Error when creating new user, please check whether the user exists or license expired");
+                
+                    try
+                    {
+                        Aliases["TDP_toad"]["frmBaseModal"]["Close"]();
+                    }
+                    catch(e)
+                    {
+                        if(Aliases["TDP_toad"]["frmBaseModal"]["Exists"])
+                            throw new Error('Closing window failed.')
+                        throw e;
+                    }
+                }
+            }
+        }
+        else
+        {
+            throw new Error("Failed to get test data from excel.");
+        }
+    }
+    catch(e)
+    {
+        bReturn = false;
+        Log["Error"](e["description"]);
+        throw e;
+    }
+    finally
+    {
+        EndLogFolder();
+    }
+    return bReturn;
+}
+
+// Main function for test.
+//* This function is only for DEBUG. DO NOT set it in the test group!!!
+function Main()
+{
+    var nID   = 1; //1, 2
+    RegisterNewTICUser(nID);
+}
+//*/

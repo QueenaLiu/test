@@ -1,0 +1,122 @@
+﻿//USEUNIT InitialEnv
+//USEUNIT Common
+//USEUNIT TDPCommon
+//USEUNIT Variable
+//USEUNIT Publish
+//USEUNIT SQLEditor
+
+var s_strFunctionPoint  = 'Publish';
+var s_strTestConfig     = 'Publish.xls'
+
+//-------------------------------------------------------------------------------------
+//Function Name : PublishSQLScripts
+//Author        : Hugo He
+//Create Date   : July 25, 2013
+//Last Modify   : 
+//Description   : Main Function, publish SQL script from SQL Editor to TIC
+//Parameter     : nID   ->  data ID in Excel
+//Return        : boolean
+//-------------------------------------------------------------------------------------
+function PublishSQLScripts(nID)
+{
+    
+    var strConfigFile = g_strProjectTestConfig + "\\" + s_strFunctionPoint + "\\" + s_strTestConfig;
+    var strSheetName  = 'PublishSQLScripts';
+    
+    //Data in Excel
+    var ticConnName, dataSource, srcConnName, objectType, databaseName, objectName, strSQL;
+
+    //Control variant
+    var objTICConn, objSrcConn, publishObject, resultPanel;
+    var menuBar, editor;
+    
+    //other variant
+    var objDict = new ActiveXObject('Scripting.Dictionary');
+    var bReturn = true;
+    
+    try
+    {
+        BeginLogFolder(arguments);
+        
+        InitialEnvMain();
+        ActivateMainWinForm();
+        Delay(1000);
+        //Get configuration from Excel
+        if (GetDataFromExcelByID(strConfigFile, strSheetName, nID, objDict))
+        {
+            ticConnName       =  objDict["Item"]("TICConnName");
+            dataSource        =  objDict["Item"]("DataSource");
+            srcConnName       =  objDict["Item"]("SrcConnName");
+            objectType        =  objDict["Item"]("ObjectType");
+            databaseName      =  objDict["Item"]("DatabaseName");
+            objectName        =  objDict["Item"]("ObjectName");
+            strSQL            =  objDict["Item"]("SQL");
+        }
+         else
+        {
+            throw new Error('Fail to read Excel data.');
+        }
+        
+        //Check TIC connection exists
+        objTICConn = GetConnection(ticConnName);
+        if (! objTICConn["Exists"])
+        {
+            throw new Error('TIC connection "'+ticConnName+'" does not exist!');
+        }
+        else
+        {
+            Reconnect(ticConnName);
+            Delay(3000);
+        }
+        
+        //Check TIC connection exists
+        objSrcConn = GetConnection(srcConnName);
+        if (! objTICConn["Exists"])
+        {
+            throw new Error('Source connection "'+srcConnName+'" does not exist!');
+        }
+        else
+        {
+            Reconnect(srcConnName);
+            Delay(3000);
+        }
+        
+        //Open editor and insert SQL
+        menuBar = Aliases["TDP_toad"]["frmMainForm"]["BarDockControl"]["DockedBarControl"];
+        menuBar["ClickItem"]('Tools');
+        SendKeys(['[Down]', '[Enter]'],[1, 1]);
+        Delay(3000);
+        Aliases["RefreshMappingInfo"]();
+        editor = Aliases["TDP_toad"]["frmMainForm"]["MdiClient"]["frmMdiDocEditor"]["EditorForm"]
+                  ["ToolWindowContainer"]["toolEditor"]["editorControl"]["syntaxEditor"];
+        editor["Text"] = strSQL;
+        editor["ClickR"](20, 20);
+        
+        //handle exception
+        WaitingForObjectWithTime(Aliases["TDP_toad"]["frmSubMenuControl"]["mctrlPopupMenu"],5);
+        
+        SendKeys(['[Down]', '[Enter]'], [10, 1]);
+        
+        bReturn = Publish["Publish"](nID, strSheetName);
+        if (bReturn)
+            Log["Message"]('Publish success!');
+        else
+            throw new Error('Publish failed!');
+        Log["Message"]('============================================');
+    }
+    catch(e)
+    {
+        bReturn = false;
+        Log["Error"](e["description"]);
+    }
+    finally
+    {
+        EndLogFolder();
+    }
+    return bReturn;
+}
+
+function test()
+{
+    PublishSQLScripts(1)
+}

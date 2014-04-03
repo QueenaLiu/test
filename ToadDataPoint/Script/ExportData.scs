@@ -1,0 +1,197 @@
+﻿//USEUNIT InitialEnv
+//USEUNIT ExcelOperator
+//USEUNIT Variable
+//USEUNIT Common
+//USEUNIT TDPCommon
+//USEUNIT LaunchTDP
+//USEUNIT ImportConnection
+//USEUNIT CreateXLSConnection
+//USEUNIT DataCompare
+//USEUNIT Export
+
+var s_strFunctionPoint  = 'Export';
+var s_strTestConfig     = 'Export.xls'
+
+//-------------------------------------------------------------------------------------
+//Function Name : ExportData
+//Author        : Hugo He
+//Create Date   : Nov 19, 2013
+//Last Modify   : 
+//Description   : Main Function, basic export  
+//Parameter     : nID --> data ID in Excel
+//Return        : Boolean
+//-------------------------------------------------------------------------------------
+function ExportData(nID)
+{
+    var strConfigFile       = g_strProjectTestConfig + "\\" + s_strFunctionPoint + "\\" + s_strTestConfig;
+    var strSheetName        = "ExportData";
+    var objDict             = new ActiveXObject("Scripting.Dictionary");
+    var bCompare            = true;
+    var bReturn             = true;
+    //Excel data variant
+    var strConnName, strSourceType, strDatabaseName, strSourceObjName;
+    var strSchema, strObjectType, strOutputFormat, strExportFileName, nRowCount;
+    //Controls
+    var objSoureObj;
+
+    //Loop to test
+    try
+    {
+        BeginLogFolder(arguments);
+        
+        InitialEnvMain();
+        ActivateMainWinForm();
+        Delay(1000);
+    
+        //Get test data from Export sheet in excel
+        if(GetDataFromExcelByID(strConfigFile, strSheetName, nID, objDict))
+        {
+            strConnName       = objDict["Item"]("ConnName");
+            strSourceType     = objDict["Item"]("SourceType");
+            strDatabaseName   = objDict["Item"]("DatabaseName");
+            strSchema         = objDict["Item"]("Schema");
+            strObjectType     = objDict["Item"]("ObjectType");
+            strSourceObjName  = objDict["Item"]("ObjectName");
+            strOutputFormat   = objDict["Item"]("OutputFormat");
+            strExportFileName = objDict["Item"]("FileName");
+            bColHeader        = objDict["Item"]("ColumnHeader");
+            nRowCount         = objDict["Item"]("RowCount");
+        }
+        else
+        {
+            throw new Error('Get data from excel failed.');
+        }
+            
+        //Export
+        if (Export["Export"](nID, strSheetName, 'Menubar'))
+        {
+            Log["Checkpoint"]('Exporting data success');
+        }
+        else
+        {
+            throw new Error('Exporting data failed');
+        }
+        Delay(3000);
+
+        //Verification
+        switch(strOutputFormat)
+        {
+            case 'Excel':
+                bCompare  = ExportRowCountVerificationExl(strExportFileName, strSourceObjName, nRowCount);
+                break;
+            case 'Comma Separated Values':
+            case 'Fixed Column Width':
+                bCompare  = ExportRowCountVerificationTxt(strExportFileName, bColHeader, nRowCount);
+                break;
+            default:
+                throw new Error('Does not support '+ strOutputFormat);
+        }
+            
+        if(bCompare == true)
+        {
+            Log["Checkpoint"]('Data match.');
+        }
+        else
+        {
+            throw new Error('Data mismatch');
+        }
+    }
+    catch(e)
+    {
+        bReturn = false;
+        Log["Error"](e["description"]);
+    }
+    finally
+    {
+        EndLogFolder();
+    }
+        
+    //Because low memory issue, redo the pre-test items every export 4 times
+    return bReturn; 
+}
+
+//-------------------------------------------------------------------------------------
+//Function Name : ExportRowCountVerificationTxt
+//Author        : Hugo He
+//Create Date   : Dec 12nd, 2013
+//Last Modify   : 
+//Description   : Verify row count of outputed txt file, does not adapt to SQL script  
+//Parameter     : strFileName   ->  file name
+//                bColHeader    ->  whether file has column header
+//                nRowCount     ->  target row count
+//Return        : Boolean
+//-------------------------------------------------------------------------------------
+function ExportRowCountVerificationTxt(strFileName, bColHeader, nRowCount)
+{
+    var arrFileRow    = null;
+    var strFile       = null;
+    var nFileRowCount = -1;
+
+    var bReturn       = true;
+
+    try
+    {
+        strFile = aqFile["ReadWholeTextFile"](strFileName, aqFile["ctUTF8"]);
+        arrFileRow = strFile["split"]('\n');
+        nFileRowCount = arrFileRow['length'];
+        if(bColHeader)
+        {
+            if(nFileRowCount-2 != nRowCount)
+                throw new Error('Row count does not match!');
+        }
+        else
+        {
+            if(nFileRowCount-1 != nRowCount)
+                throw new Error('Row count does not match!');
+        }
+    }
+    catch(e)
+    {
+        bReturn = false;
+        throw e;
+    }
+    finally
+    {
+        return bReturn;
+    }
+}
+
+
+//-------------------------------------------------------------------------------------
+//Function Name : ExportRowCountVerificationExl
+//Author        : Hugo He
+//Create Date   : Dec 12nd, 2013
+//Last Modify   : 
+//Description   : Verify row count of outputed Excel file
+//Parameter     : strFileName   ->  file name
+//                strSheetName  ->  sheet name
+//                nRowCount     ->  target row count
+//Return        : Boolean
+//-------------------------------------------------------------------------------------
+function ExportRowCountVerificationExl(strFileName, file1SheetName, nRowCount)
+{
+    var arrFile1DataLines   = new Array();
+    var nFileRowCount       = -1;
+
+    var bReturn       = true;
+        
+    try
+    {
+        if(! GetDataFromExcel(strFileName, file1SheetName, arrFile1DataLines)){
+            throw new Error('Read '+strFileName+ 'failed');
+        }
+        nFileRowCount = arrFile1DataLines['length'];
+        
+        if(nFileRowCount != nRowCount)
+            throw new Error('Row count does not match!');
+    }
+    catch(e)
+    {
+        bReturn = false;
+        throw e;
+    }
+    finally
+    {
+        return bReturn;
+    }
+}

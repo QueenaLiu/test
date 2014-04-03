@@ -1,0 +1,230 @@
+﻿///////////////////////////////////////////////////////////////////////////////////////
+//
+//  Unit Name     : CreateXLSConnection
+//  Author        : Roy T.Burns(Royburns.Peng@software.dell.com)
+//  Create Date   : July 25, 2013
+//  Last Modify   : 
+//  Description   : Test Step -- Create a connection to excel.
+//
+//    All rights reserved by TDP Team.
+//
+///////////////////////////////////////////////////////////////////////////////////////
+
+//USEUNIT TDPCommon
+//USEUNIT Variable
+//USEUNIT InitialEnv
+
+// variable
+var s_strFunctionPoint        = "CreateConnections"; // the name of function point name, use it for folder name. 
+var s_strTestConfig           = "CreateConnections.xls";
+
+// Column of excel
+var DataSource                = undefined;
+var FileName                  = undefined;
+var Name                      = undefined;
+var Comment                   = undefined;
+
+//-------------------------------------------------------------------------------------
+//Function Name : CreateXLSConnection
+//Author        : Roy T.Burns
+//Create Date   : July 25, 2013
+//Last Modify   : 
+//Description   : Main function of the current test step.
+//Parameter     : nID -- test case id, define in excel.
+//Return        : null
+//-------------------------------------------------------------------------------------
+function CreateXLSConnection(nID)
+{
+    var strConfigFile     = g_strProjectTestConfig + "\\" + s_strFunctionPoint + "\\" + s_strTestConfig;
+    var strSheetName      = "CreateXLSConnection"; // test step name, use it for sheet name
+    var objDict           = new ActiveXObject("Scripting.Dictionary");
+    var strConnectName    = "";
+    var strFileName       = "";
+    
+    var bResult           = false;
+    
+    try
+    {
+        BeginLogFolder(arguments);
+        
+        InitialEnvMain();
+        ActivateMainWinForm();
+        Delay(1000);
+        
+        //Get configuration from Excel
+        if(GetDataFromExcelByID(strConfigFile, strSheetName, nID, objDict))
+        {
+            DataSource    = objDict["Item"]("DataSource");
+            FileName      = objDict["Item"]("FileName");
+            Name          = objDict["Item"]("Name");
+            Comment       = objDict["Item"]("Comment");
+            
+            strFileName   = g_strProjectTestData + "\\" + s_strFunctionPoint + "\\" + FileName;
+            
+            if(Name != undefined && Name != "")
+            {
+                strConnectName  = Name;
+            }
+            else
+            {
+                strConnectName  = FileName;
+            }
+        }
+        
+        var frmConnection = Aliases["TDP_toad"]["frmMainForm"]["DockPanel"]
+                                ["ControlContainer"]["AnalystBrowserControl"]
+                                ["connectionManagerControl1"]["connectionControl1"];
+                                
+        var objFind = frmConnection["connectionList"]["groupingDataPanel"]["Find"]("Value", strConnectName);
+        if(objFind && objFind != undefined && objFind["Exists"])
+        {
+            Log["Message"]("The connection is exists!");
+            Reconnect(strConnectName);
+        }
+        else
+        {
+            Log["Message"]("The connection is not exists. Waiting to connect...");
+            
+            frmConnection["BarDockControl"]["DockedBarControl"]["btnCreate"]["ClickButton"]();
+            var pnlProviderTop = Aliases["TDP_toad"]["frmConnectionProperties"]["pnlConnectionProperties"]
+                                ["pnlProviderTop"];
+    
+            WaitingForObjectWithTime(pnlProviderTop["groupSelectionControl1"], 5);
+            if(pnlProviderTop["groupSelectionControl1"])
+            {
+                //pnlProviderTop["groupSelectionControl1"]["Click"](96, 6);
+                //ClickTreeListItem(Aliases["TDP_toad"]["PopupContainerForm"]["PopupContainerControl"]["groupTree"], "Value", DataSource, 5);
+                Sys["Keys"](DataSource);
+                Sys["Keys"]('[Enter]');
+                //SendKeys([DataSource, '[Enter]'], [7,2]);
+                
+                var objLogin = Aliases["TDP_toad"]["frmConnectionProperties"]
+                              ["pnlConnectionProperties"]["pnlControl"]
+                              ["pnlExcelConnection"]["xtraTabControl1"]
+                              ["xtabpageGeneral"];
+                              
+                objLogin["cmbDataSources"]["tbxMaskBox"]["SetText"](strFileName);
+                
+                var pnlProviderBtm = Aliases["TDP_toad"]["frmConnectionProperties"]["pnlConnectionProperties"]
+                                    ["pnlProviderBottom"];
+                if(strConnectName != undefined && strConnectName != "")
+                {
+                    pnlProviderBtm["btneName"]["tbxMaskBox"]["SetText"](strConnectName);
+                }
+                //pnlProviderBtm["cbxSavePassword"]["ClickButton"](cbChecked);
+                ButtonClickWithDelay(Aliases["TDP_toad"]["frmConnectionProperties"]["btnConnect"], 5);
+            }
+            
+            WaitingForObjectWithTime(Aliases["TDP_toad"]["frmMainForm"], 5);
+            if(Aliases["TDP_toad"]["frmMainForm"]["CanFocus"] == true)
+            {
+                Log["Message"]("Success!");
+            }
+            else
+            {
+                Log["Message"]("Have something Unexpected Dialog to process!");
+                //...
+            }
+        }
+    }
+    catch(e)
+    {
+        Log["Error"](e.description);
+        //Runner["Stop"]();
+    }
+    finally
+    {
+        EndLogFolder();
+    }
+}
+
+//-------------------------------------------------------------------------------------
+//Function Name : CreateXLSConnectionWithFile
+//Author        : Hugo He
+//Create Date   : Nov 15, 2013
+//Last Modify   : 
+//Description   : Create Excel Connection With File
+//Parameter     : strFileName -> File name
+//                strConnectName    -> connection name
+//Return        : boolean
+//-------------------------------------------------------------------------------------
+function CreateXLSConnectionWithFile(strFileName, strConnectName)
+{
+    InitialEnvMain();
+    ActivateMainWinForm();
+    
+    var bResult  = false;
+    
+    try
+    {
+        var frmConnection = Aliases["TDP_toad"]["frmMainForm"]["DockPanel"]
+                                ["ControlContainer"]["AnalystBrowserControl"]
+                                ["connectionManagerControl1"]["connectionControl1"];
+                                
+        var objFind = frmConnection["connectionList"]["groupingDataPanel"]["Find"]("Value", strConnectName);
+        if(objFind && objFind != undefined && objFind["Exists"])
+        {
+            Log["Message"]("The connection is exists!");
+        }
+        else
+        {
+            Log["Message"]("The connection is not exists. Waiting to connect...");
+            
+            frmConnection["BarDockControl"]["DockedBarControl"]["btnCreate"]["ClickButton"]();
+            var pnlProviderTop = Aliases["TDP_toad"]["frmConnectionProperties"]["pnlConnectionProperties"]
+                                ["pnlProviderTop"];
+    
+            WaitingForObjectWithTime(pnlProviderTop["groupSelectionControl1"], 5);
+            if(pnlProviderTop["groupSelectionControl1"])
+            {
+                //pnlProviderTop["groupSelectionControl1"]["Click"](96, 6);
+                //ClickTreeListItem(Aliases["TDP_toad"]["PopupContainerForm"]["PopupContainerControl"]["groupTree"], "Value", 'Excel', 5);
+                Sys["Keys"]('Excel');
+                Sys["Keys"]('[Enter]');
+                //SendKeys([DataSource, '[Enter]'], [7,2]);
+                
+                var objLogin = Aliases["TDP_toad"]["frmConnectionProperties"]
+                              ["pnlConnectionProperties"]["pnlControl"]
+                              ["pnlExcelConnection"]["xtraTabControl1"]
+                              ["xtabpageGeneral"];
+                              
+                objLogin["cmbDataSources"]["tbxMaskBox"]["SetText"](strFileName);
+                
+                var pnlProviderBtm = Aliases["TDP_toad"]["frmConnectionProperties"]["pnlConnectionProperties"]
+                                    ["pnlProviderBottom"];
+                if(strConnectName != undefined && strConnectName != "")
+                {
+                    pnlProviderBtm["btneName"]["tbxMaskBox"]["SetText"](strConnectName);
+                }
+                //pnlProviderBtm["cbxSavePassword"]["ClickButton"](cbChecked);
+                ButtonClickWithDelay(Aliases["TDP_toad"]["frmConnectionProperties"]["btnConnect"], 5);
+            }
+            
+            WaitingForObjectWithTime(Aliases["TDP_toad"]["frmMainForm"], 5);
+            if(Aliases["TDP_toad"]["frmMainForm"]["CanFocus"] == true)
+            {
+                Log["Message"]("Success!");
+            }
+            else
+            {
+                Log["Message"]("Have something Unexpected Dialog to process!");
+                //...
+            }
+        }
+    }
+    catch(e)
+    {
+        Log["Error"](e.description);
+    }
+}
+
+// Main function for test.
+/* This function is only for DEBUG. DO NOT set it in the test group!!!
+function Main()
+{
+    var nID   = 1; //1, 2
+    CreateXLSConnection(nID);
+    
+    //CreateXLSConnectionWithFile('C:\\DATATYPE1_old.xls', 'TESTC');
+}
+//*/

@@ -1,0 +1,107 @@
+<ToadStudio>
+  <FileVersion Encryption="3Des">3</FileVersion>
+  <ConnectionHierarchy>
+    <DbPlatform name="Intelligence Central">
+      <Path />
+      <Connections>
+        <Connection type="TeamServer" autoCommit="True">
+          <Path>Intelligence Central</Path>
+          <AutoConnect>False</AutoConnect>
+          <Database>
+          </Database>
+          <Host>localhost</Host>
+          <User>root</User>
+          <Password>885C2F607D4EDB5E</Password>
+          <WinAuth>False</WinAuth>
+          <LastConnectionDate>2014-01-17T05:55:10.3350244</LastConnectionDate>
+          <Options>
+            <Protocol type="Socket" port="3566" />
+          </Options>
+        </Connection>
+      </Connections>
+      <Groups />
+    </DbPlatform>
+    <DbPlatform name="Oracle">
+      <Path />
+      <Connections>
+        <Connection type="Oracle" autoCommit="False">
+          <Name>TO11R264</Name>
+          <Path>Oracle</Path>
+          <AutoConnect>False</AutoConnect>
+          <Database>QUEST_STAGE</Database>
+          <Host>TO11R264</Host>
+          <User>QUEST_STAGE</User>
+          <Password>2364695B2B6F49346CCE0BE78F7DFFA9</Password>
+          <WinAuth>False</WinAuth>
+          <LastConnectionDate>2014-01-17T07:01:57.3671758</LastConnectionDate>
+          <ConnectionMode>Default</ConnectionMode>
+          <Port>1521</Port>
+          <Sid>
+          </Sid>
+          <ConnectionType>Client</ConnectionType>
+          <Home>OraClient11g_home1_32bit</Home>
+          <ExplainPlanTable>
+          </ExplainPlanTable>
+        </Connection>
+        <Connection type="Oracle" autoCommit="False">
+          <Name>ORA10R2</Name>
+          <Path>Oracle</Path>
+          <AutoConnect>False</AutoConnect>
+          <Database>
+          </Database>
+          <Host>ORA10R2</Host>
+          <User>QUEST_STAGE</User>
+          <Password>2364695B2B6F49346CCE0BE78F7DFFA9</Password>
+          <WinAuth>False</WinAuth>
+          <LastConnectionDate>2014-01-06T02:47:59.1885834</LastConnectionDate>
+          <ConnectionMode>Default</ConnectionMode>
+          <Port>1521</Port>
+          <Sid>
+          </Sid>
+          <ConnectionType>Client</ConnectionType>
+          <Home>OraClient11g_home1_32bit</Home>
+          <ExplainPlanTable>
+          </ExplainPlanTable>
+        </Connection>
+      </Connections>
+      <Groups />
+    </DbPlatform>
+    <DbPlatform name="SQL Server">
+      <Path />
+      <Connections>
+        <Connection type="SqlServer" autoCommit="True">
+          <Name>xSQLServer</Name>
+          <Path>SQL Server</Path>
+          <AutoConnect>False</AutoConnect>
+          <Database>TIC_test</Database>
+          <Host>zhuw2k8spl002\splsql2008ins1</Host>
+          <User>sa</User>
+          <Password>369D43E887059AF4B96E6EFBE0D448FD</Password>
+          <WinAuth>False</WinAuth>
+          <LastConnectionDate>2014-01-17T06:42:25.9969981</LastConnectionDate>
+          <EncryptConnection>False</EncryptConnection>
+          <NetworkPacketSize>4096</NetworkPacketSize>
+          <NetworkProtocol>Default</NetworkProtocol>
+          <SqlServerEntry Key="Application Name" Value="Toad Data Point" />
+        </Connection>
+        <Connection type="SqlServer" autoCommit="True">
+          <Name>TDPDS_MSSQL</Name>
+          <Path>SQL Server</Path>
+          <AutoConnect>False</AutoConnect>
+          <Database>
+          </Database>
+          <Host>10.30.155.30\TDP_AUTO,1500</Host>
+          <User>sa</User>
+          <Password>3D8C36B0BE649B3A4D25F3C6ED6DB18E</Password>
+          <WinAuth>False</WinAuth>
+          <LastConnectionDate>2014-01-17T06:02:33.6156449</LastConnectionDate>
+          <EncryptConnection>False</EncryptConnection>
+          <NetworkPacketSize>4096</NetworkPacketSize>
+          <NetworkProtocol>Default</NetworkProtocol>
+          <SqlServerEntry Key="Application Name" Value="Toad Data Point" />
+        </Connection>
+      </Connections>
+      <Groups />
+    </DbPlatform>
+  </ConnectionHierarchy>
+</ToadStudio>

@@ -1,0 +1,123 @@
+﻿//USEUNIT InitialEnv
+//USEUNIT ExcelOperator
+//USEUNIT Variable
+//USEUNIT Common
+//USEUNIT TDPCommon
+//USEUNIT CreateXLSConnection
+//USEUNIT DataCompare
+//USEUNIT Export
+//USEUNIT ExportWithTemplate
+//USEUNIT EditTemplate
+
+
+var s_strFunctionPoint  = 'Export';
+var s_strTestConfig     = 'Export.xls'
+
+//-------------------------------------------------------------------------------------
+//Function Name : ExportTemplate
+//Author        : Hugo He
+//Create Date   : July 25, 2013
+//Last Modify   : 
+//Description   : Main Function, test export template feature
+//Parameter     : nID   ->  ID in Excel
+//Return        : boolean
+//-------------------------------------------------------------------------------------
+function ExportTemplate(nID)
+{
+    var strConfigFile       = g_strProjectTestConfig + "\\" + s_strFunctionPoint + "\\" + s_strTestConfig;
+    var strSheetName        = "ExportTemplate"
+    var strNewFileName      = "C:\\NewTemplate.csv";
+    var objDict             = new ActiveXObject("Scripting.Dictionary");
+    var bCompare            = true;
+    var bReturn             = true;
+    //Excel data variant
+    var nDataCompareID;
+    var strConnName, strSourceType, strDatabaseName, strSourceObjName, strSchema;
+    var strObjectType, strExportFileName, strTemplateName, strSybaseASEObjName;
+
+    //Get configuration from Excel
+    try
+    {
+        BeginLogFolder(arguments);
+        
+        InitialEnvMain();
+        ActivateMainWinForm();
+        Delay(1000);
+    
+        //Get Export test data from Excel
+        if (GetDataFromExcelByID(strConfigFile, strSheetName, nID, objDict))
+        {
+            strConnName       = objDict["Item"]("ConnName");
+            strSourceType     = objDict["Item"]("SourceType");
+            strDatabaseName   = objDict["Item"]("DatabaseName");
+            strSchema         = objDict["Item"]("Schema");
+            strObjectType     = objDict["Item"]("ObjectType");
+            strSourceObjName  = objDict["Item"]("ObjectName");
+            strExportFileName = objDict["Item"]("FileName");
+            strTemplateName   = objDict["Item"]("TemplateName");
+            nDataCompareID    = objDict["Item"]("DataCompareID");
+        }
+        else
+        {
+            throw new Error('Get data from Export excel failed.');
+        }
+        
+        //Export and create template
+        if (Export["Export"](nID, strSheetName, 'Menubar'))
+        {
+            Log["Checkpoint"]('Exporting data success');
+        }
+        else
+        {
+            throw new Error('Exporting data failed');
+        }
+        Delay(3000);
+        
+        //Open and edit template
+        EditTemplate["EditTemplate"](strConnName, strTemplateName, strNewFileName);
+        
+        //Export with template
+        ExportWithTemplate["ExportWithTemplate"](strTemplateName);
+        
+        //Connect Excel to TDP
+        CreateXLSConnection["CreateXLSConnectionWithFile"](strNewFileName, 'NewTemplate');
+        
+        if(strSourceType == 'SybaseASE')
+        {
+            strSybaseASEObjName = strSourceObjName;
+            strSourceObjName = strSourceObjName["split"]('.')[1];
+        }
+        
+        //Foucs on source object
+        switch (aqString["ToUpper"](strSourceType))
+        {
+            case 'ORACLE':
+            case 'SQLSERVER':
+                objSoureObj = GetDBObject(strConnName, strSchema, strObjectType, strSourceObjName);
+                break;
+            case 'SYBASEASE':
+                objSoureObj = GetDBObject(strConnName, strSchema, strObjectType, strSourceObjName);
+                break;
+            default:
+                Log["Error"]('Does not support "'+strSourceType+'" data source.');
+        }
+        objSoureObj["Click"]();
+        //Compare export result with source table
+        bCompare = DataCompare["DataCompare"](nDataCompareID);
+        
+        if(bCompare == true)
+            Log["Checkpoint"]('Data match!');
+        else
+            throw new Error('Data mismaching!');
+    }
+    catch(e)
+    {
+        bReturn = false;
+        Log["Error"](e["description"]);
+    }
+    finally
+    {
+        EndLogFolder();
+    }
+    return bReturn;
+}

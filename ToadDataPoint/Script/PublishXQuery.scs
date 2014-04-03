@@ -1,0 +1,198 @@
+﻿//-------------------------------------------------------------------------------------
+//Function Name : PublishXQuery
+//Author        : Queena Liu
+//Create Date   : March 25, 2014
+//Last Modify   : 
+//Description   : Main Function, publish xquery from query builder to TIC
+//Parameter     : nID   ->  connections number
+//Return        : boolean
+//-------------------------------------------------------------------------------------
+
+//USEUNIT InitialEnv
+//USEUNIT Common
+//USEUNIT TDPCommon
+//USEUNIT Variable
+//USEUNIT Publish
+
+var s_strFunctionPoint  = 'Publish';
+var s_strTestConfig     = 'Publish.xls'
+
+function PublishXQuery(nID)
+{
+    var strConfigFile = g_strProjectTestConfig + "\\" + s_strFunctionPoint + "\\" + s_strTestConfig;
+    var strSheetName  = 'PublishXQuery';
+    var excelDriver = DDT["ExcelDriver"]( strConfigFile,strSheetName );
+    
+    //Data in Excel
+    var ticConnName, dataSource, srcConnName, objectType, databaseName;
+    var objectName = new Array();
+    var joinColumns = new Array();
+    var destObjectName;
+    // arrJoinColumns;
+
+    //Control variant
+    var objTICConn, objSrcConn, publishObject;
+    var objTabStrip, objDataGridCtrl
+    
+    //other variant
+    //var objDict = new ActiveXObject('Scripting.Dictionary');
+    var bReturn = true;
+    var i = 0;
+    
+    try
+    {
+        BeginLogFolder(arguments);
+        
+        InitialEnvMain();
+        ActivateMainWinForm();
+        Delay(1000);
+        CloseAllQueryBuilder();
+        
+        
+        //Get configuration from Excel
+        //nID represent for the Xquery connection number
+        while(! excelDriver["EOF"]())
+        {
+            ticConnName       =  aqConvert["VarToStr"](excelDriver["Value"]("TICConnName"));
+            dataSource        =  aqConvert["VarToStr"](excelDriver["Value"]("DataSource"));
+            srcConnName       =  aqConvert["VarToStr"](excelDriver["Value"]("SrcConnName"));
+            objectType        =  aqConvert["VarToStr"](excelDriver["Value"]("ObjectType"));
+            databaseName      =  aqConvert["VarToStr"](excelDriver["Value"]("DatabaseName"));
+            objectName[i]     =  aqConvert["VarToStr"](excelDriver["Value"]("ObjectName"));
+            joinColumns[i]    =  aqConvert["VarToStr"](excelDriver["Value"]("JoinColumns"));
+                
+            //Check TIC connection exists
+            //Only get the first ticConnName, and connect once
+            if(i == 0)
+            {
+                objTICConn = GetConnection(ticConnName);
+                if (! objTICConn["Exists"])
+                {
+                    throw new Error('TIC connection "'+ticConnName+'" does not exist!');
+                }
+                else
+                {
+                    Reconnect(ticConnName);
+                    Delay(3000);
+                }
+            }
+        
+            //Check TIC connection exists
+            objSrcConn = GetConnection(srcConnName);
+            if (! objTICConn["Exists"])
+            {
+                throw new Error('Source connection "'+srcConnName+'" does not exist!');
+            }
+            else
+            {
+                Reconnect(srcConnName);
+                Delay(3000);
+            }
+            
+        
+            //Get object 
+            switch (aqString["ToUpper"](dataSource))
+            {
+                case 'ORACLE':
+                case 'SYBASE':
+                case 'SQLSERVER':
+                    //publishObject = GetDBObject(srcConnName, databaseName, objectType, objectName[i]);
+                    publishObject = FindDBObject(srcConnName, databaseName, objectType, objectName);
+                    break;
+                default:
+                    throw new Error('Does not support "'+dataSource+'" data source.');
+            }
+            if(publishObject != null)
+            {
+                publishObject["Click"]();
+               // publishObject["DblClick"]();
+                Delay(3000);
+            }
+            else
+            {
+                throw new Error(objectType +'"'+ objectName[i] + '" does not exist!');
+            }
+        
+            //Go to View Details
+            publishObject["ClickR"]();
+            Delay(3000);
+            SendKeys(['[Down]', '[Enter]'], [2, 1]);
+            var ndot = aqString["Contains"](objectName[i],'.');
+            if( ndot != -1)
+            {
+                objectName[i] = aqString["SubString"](objectName[i],ndot+1, aqString["GetLength"](objectName[i]) );
+                objectName[i] = objectName[i]["toUpperCase"]();
+                
+            }
+            excelDriver["Next"]();
+            i+=1;
+            if(i == nID ) break;
+        }    
+        Delay(3000);    
+        
+        var objTabStrip = Aliases["TDP_toad"]["frmMainForm"]["MdiClient"]["frmMdiDocQueryBuilder"]["QueryBuilder"]
+                      ["pnlModel"]["initialModel"]["ctrToolWindow"]["DockTabStrip"];
+        var objCtrlPaint = objTabStrip["TabStripPage"]["toolWindowDiagram"]["ctrldiagram"]["pnlPaint"]["ctrlPaint"];
+       
+        var objEleCtnCtl = objCtrlPaint["FindChild"]("Caption",objectName[0]); 
+        var objAll = objEleCtnCtl["FindChild"]("Name","*UIAObject*Wildcard_*",7,true);
+        if( objAll["ToggleState"] == 0)
+        {
+           objAll["Toggle"]();
+        }
+        var objdesc = objEleCtnCtl["FindChild"]("Name","*UIAObject*"+joinColumns[0]+"*",7,true);
+          
+        if( objectName[1] == objectName[0])
+        {
+            destObjectName = objectName[0]+"_1";     
+        } 
+        else
+        {
+            destObjectName = objectName[1];
+        }
+    
+        objCtrlPaint["RefreshMappingInfo"]();
+        var objEleCtnCtl2 = objCtrlPaint["FindChild"]("Caption",destObjectName);
+        var objAll2 = objEleCtnCtl2["FindChild"]("Name","*UIAObject*Wildcard_*",7,true);
+        if( objAll2["ToggleState"] == 0)
+        {
+            objAll2["Toggle"]();
+        }
+        var objdesc2 = objEleCtnCtl2["FindChild"]("Name","*UIAObject*"+joinColumns[1]+"*",7,true);
+    
+         
+        objdesc["Drag"](objdesc["Width"]/2,objdesc["Height"]/2,objdesc2["ScreenLeft"] -objdesc["ScreenLeft"] ,objdesc2["ScreenTop"] - objdesc["ScreenTop"]);
+      
+        objTabStrip["SelectedPage"] = objTabStrip["Controls"]["Item_2"](1);
+        delay(3000);
+        
+        objTabStrip["ClickR"](); 
+        Delay(2000);
+        SendKeys(['[Down]', '[Enter]'], [10, 1]);
+        Delay(3000);
+             
+        bReturn = Publish["Publish"](1, strSheetName);
+        if (bReturn)
+            Log["Message"]('Publish success!');
+        else
+            throw new Error('Publish failed!');
+        Log["Message"]('============================================');
+    }
+    catch(e)
+    {
+        bReturn = false;
+        Log["Error"](e["description"]);
+    }
+    finally
+    {
+        DDT["CloseDriver"]( excelDriver["Name"] );
+        EndLogFolder();
+    }
+    return bReturn;
+}
+
+function test()
+{
+    PublishXQuery(2);
+}
+

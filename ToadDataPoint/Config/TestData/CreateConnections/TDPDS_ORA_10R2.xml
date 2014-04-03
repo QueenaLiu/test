@@ -1,0 +1,30 @@
+<ToadStudio>
+  <FileVersion Encryption="3Des">3</FileVersion>
+  <ConnectionHierarchy>
+    <DbPlatform name="Oracle">
+      <Path />
+      <Connections>
+        <Connection type="Oracle" autoCommit="False">
+          <Name>TDPDS_ORA</Name>
+          <Path>Oracle</Path>
+          <AutoConnect>False</AutoConnect>
+          <Database>TDP_AUTO</Database>
+          <Host>ORA10R2</Host>
+          <User>TDP_AUTO</User>
+          <Password>6C985D345E07B5EF37981F13168D3092</Password>
+          <WinAuth>False</WinAuth>
+          <LastConnectionDate>2014-01-26T02:32:50.0690625</LastConnectionDate>
+          <ConnectionMode>Default</ConnectionMode>
+          <Port>1521</Port>
+          <Sid>
+          </Sid>
+          <ConnectionType>Client</ConnectionType>
+          <Home>OraClient11g_home1_32bit</Home>
+          <ExplainPlanTable>
+          </ExplainPlanTable>
+        </Connection>
+      </Connections>
+      <Groups />
+    </DbPlatform>
+  </ConnectionHierarchy>
+</ToadStudio>

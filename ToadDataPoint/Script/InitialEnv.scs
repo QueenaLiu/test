@@ -1,0 +1,70 @@
+﻿///////////////////////////////////////////////////////////////////////////////////////
+//
+//  Unit Name     : InitialEnv
+//  Author        : Roy T.Burns(Royburns.Peng@software.dell.com)
+//  Create Date   : July 25, 2013
+//  Last Modify   : 
+//  Description   : Initial the test environment.
+//
+//    All rights reserved by TDP Team.
+//
+///////////////////////////////////////////////////////////////////////////////////////
+
+//USEUNIT Common
+//USEUNIT TDPCommon
+//USEUNIT Variable
+
+//
+function InitialEnvMain()
+{
+    try
+    {
+        BeginLogFolder(arguments);
+        
+        InitialSiteCode();
+        GetConfigFile();
+    }
+  	catch(e)
+  	{
+  		  Log["Error"](e["description"]);
+  	}
+  	finally
+  	{
+  		  EndLogFolder();
+  	}
+}
+
+//
+function InitialSiteCode()
+{
+    SITE_CODE = "Zhu";
+}
+
+//
+function GetConfigFile()
+{
+    try
+    {
+        BeginLogFolder(arguments);
+        
+        switch(SITE_CODE)
+        {
+            case "Mel":
+                ConfigFile = Project["Path"] + "\Config\\TDPMel.xls";
+                break;
+            case "Zhu":
+            default:
+                ConfigFile = Project["Path"] + "\Config\\TDPZhu.xls";
+                break;
+        }
+        Log["Message"](ConfigFile);
+        }
+  	catch(e)
+  	{
+  		  Log["Error"](e["description"]);
+  	}
+  	finally
+  	{
+  		  EndLogFolder();
+  	}
+}

@@ -1,0 +1,37 @@
+<ToadStudio>
+  <FileVersion Encryption="3Des">3</FileVersion>
+  <ConnectionHierarchy>
+    <DbPlatform name="SAP Sybase ASE">
+      <Path />
+      <Connections>
+        <Connection type="Sybase" autoCommit="True">
+          <Name>TDPDS_SYBASEASE</Name>
+          <Path>SAP Sybase ASE</Path>
+          <AutoConnect>False</AutoConnect>
+          <Database>master</Database>
+          <Host>10.30.152.179</Host>
+          <User>sa</User>
+          <Password>4EAEAEF79DFB934C</Password>
+          <WinAuth>False</WinAuth>
+          <LastConnectionDate>2014-01-15T02:25:42.7332766</LastConnectionDate>
+          <Server>10.30.152.179</Server>
+          <InterfaceServer>User Defined</InterfaceServer>
+          <Engine>
+          </Engine>
+          <Port>5000</Port>
+          <CharSet>iso_1</CharSet>
+          <EnableSSL>False</EnableSSL>
+          <TextSize>32</TextSize>
+          <SSLCertificatePath>
+          </SSLCertificatePath>
+          <BroadcastOption>All</BroadcastOption>
+          <BulkCopyMethod>ArrayInserts</BulkCopyMethod>
+          <BulkCopyEnabled>False</BulkCopyEnabled>
+          <SystemObjectFilter>
+          </SystemObjectFilter>
+        </Connection>
+      </Connections>
+      <Groups />
+    </DbPlatform>
+  </ConnectionHierarchy>
+</ToadStudio>

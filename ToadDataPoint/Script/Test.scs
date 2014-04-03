@@ -1,0 +1,571 @@
+﻿///////////////////////////////////////////////////////////////////////////////////////
+//
+//  Unit Name     : Test
+//  Author        : Roy T.Burns(Royburns.Peng@software.dell.com)
+//  Create Date   : Oct 10, 2013
+//  Last Modify   : 
+//  Description   : This file is for testing, DO NOT USE.
+//
+//    All rights reserved by TDP Team.
+//
+///////////////////////////////////////////////////////////////////////////////////////
+
+//USEUNIT TDPCommon
+//USEUNIT Variable
+//USEUNIT InitialEnv
+
+///////////////////////////////////////////////////////////////////////////////////////////
+function Test_Switch()
+{
+    var ImportSource = "File";
+    switch(ImportSource)
+    {
+        case "File":
+            Log["Message"]("File");
+        case "Folder":
+            Log["Message"]("Folder");
+        case "Query":
+            Log["Message"]("Query");
+        default:
+            Log["Error"]("default");
+    }
+}
+
+//
+function Test_GetTopWindow()
+{
+    var objTopWindow  = undefined;
+    var nTopIndex     = undefined;
+    
+    nTopIndex = Win32API["GetTopWindow"](0);
+    
+    Log["Message"](typeof(nTopIndex));
+    Log["Message"](nTopIndex);
+    //Log["Message"](typeof(objTopWindow));
+    //Log["Message"](objTopWindow["Name"]);
+    
+    var objActive = Win32API["GetActiveWindow"]();
+    Log["Message"](typeof(objActive));
+    Log["Message"](objActive);
+}
+
+//
+function Test_ClickThePopupTreeListItem()
+{
+    ActivateWinForm(Aliases["TDP_toad"]["frmConnectionProperties"]);
+    Aliases["TDP_toad"]["frmConnectionProperties"]["pnlConnectionProperties"]["pnlProviderTop"]["groupSelectionControl1"]["Click"](96, 6);
+    
+    //var objORA = Aliases["TDP_toad"]["PopupContainerForm"]["PopupContainerControl"]["groupTree"]["groupingDataPanel"]["Find"]("Value", "Oracle", 2);
+    //var objORA = Aliases["TDP_toad"]["PopupContainerForm"]["PopupContainerControl"]["groupTree"]["groupingDataPanel"]["Find"]("Value", "Sybase ASE", 4);
+    //var objORA = Aliases["TDP_toad"]["PopupContainerForm"]["PopupContainerControl"]["groupTree"]["groupingDataPanel"]["Find"]("Value", "Sybase IQ", 4);
+    //var objORA = Aliases["TDP_toad"]["PopupContainerForm"]["PopupContainerControl"]["groupTree"]["groupingDataPanel"]["FindChild"]("Value", "Sybase ASE", 4);
+    var objORA = Aliases["TDP_toad"]["PopupContainerForm"]["PopupContainerControl"]["groupTree"]["groupingDataPanel"]["FindAllChildren"]("Value", "Sybase ASE", 4);
+    if(objORA && objORA != undefined && objORA["Exists"])
+    {
+        Log["Message"]("Find the object!");
+        objORA["Click"](3, 5);
+    }
+    else
+    {
+        Log["Message"]("Do not find the object!");
+    }
+}
+
+//
+function Test_TopWindow()
+{
+    ActivateWinForm(Aliases["TDP_toad"]["frmBaseModal"]);
+    Log["Message"](Aliases["TDP_toad"]["frmMainForm"]["TopLevel"]);//true
+    Log["Message"](Aliases["TDP_toad"]["frmBaseModal"]["TopLevel"]);//true
+    Log["Message"](Aliases["TDP_toad"]["frmMainForm"]["CanFocus"]);//false
+    Log["Message"](Aliases["TDP_toad"]["frmBaseModal"]["CanFocus"]);//true
+    
+    var connectionControl1 = Aliases["TDP_toad"]["frmMainForm"]["DockPanel"]
+                                ["ControlContainer"]["AnalystBrowserControl"]
+                                ["connectionManagerControl1"]["connectionControl1"];
+    g_strORAConnectData = "root@Localhost";
+    
+    var findres = connectionControl1["connectionList"]["groupingDataPanel"]["Find"]("Value", g_strORAConnectData, 3);
+    if(findres && findres != undefined && findres["Exists"])
+    {
+        Log["Message"]("Find!");
+        Log["Message"]("Oracle connection create success!");
+    }
+    else
+    {
+        Log["Message"]("Can't find.");
+    }
+}
+
+//
+function Test_FindThePopupTreeListItem()
+{
+    ActivateWinForm(Aliases["TDP_toad"]["frmConnectionProperties"]);
+    Aliases["TDP_toad"]["frmConnectionProperties"]["pnlConnectionProperties"]["pnlProviderTop"]["groupSelectionControl1"]["Click"](96, 6);
+    
+    var objTIC = Aliases["TDP_toad"]["PopupContainerForm"]["PopupContainerControl"]["groupTree"]["groupingDataPanel"]["Find"]("Value", "Intelligence Central", 2);
+    if(objTIC && objTIC != undefined && objTIC["Exists"])
+    {
+        Log["Message"]("Find the object!");
+        objTIC["Click"](3, 5);
+    }
+    else
+    {
+        Log["Message"]("Do not find the object!");
+    }
+}
+
+////////////////////////////////////////////////////////////////////////////////
+function Test()
+{
+    ActivateMainWinForm();
+    Delay(1000);
+    
+    Log["Message"](ProjectSuite["Path"] + "testFiles\\DataForExport.xls");
+    
+    var menuBar = Aliases["TDP_toad"]["frmMainForm"]["WinFormsObject"]("BarDockControl", "", 6)["WinFormsObject"]("DockedBarControl", "", 1);
+    menuBar["ClickItem"]("Tools|Export|Export Wizard*");
+}
+
+function TestMenuItemClick()
+{
+    ActivateMainWinForm();
+    
+    var menuBar = Aliases["TDP_toad"]["frmMainForm"]["WinFormsObject"]("BarDockControl", "", 6)["WinFormsObject"]("DockedBarControl", "", 1);
+    //menuBar["ClickItem"]("Tools|Import|Import Wizard*");
+    //menuBar["ClickItem"]("Tools|Import");
+    
+    //Aliases["TDP_toad"]["frmMainForm"]["BarDockControl"]["DockedBarControl"]["MenuBar"]("Menu bar")
+    Aliases["TDP_toad"]["frmMainForm"]["BarDockControl"]["DockedBarControl"]["Tools"]["Click"](2, 2);
+    var objExport = Aliases["TDP_toad"]["frmSubMenuControl"]["smctrlSubMenu"]["Find"]("Caption", "Export", 2);
+    if(objExport && objExport != undefined && objExport["Exists"])
+    {
+        Log["Message"]("Find the object!");
+        if(objExport["Enabled"])
+        {
+            //objExport["ClickButton"]();
+            objExport["SetFocus"]();
+            objExport["Click"](2, 2);
+            //Aliases["TDP_toad"]["frmSubMenuControl"]["smctrlSubMenu"]["UIAObject"]("Export_Wizard_")["ClickButton"]();
+            
+            var objExportWizard = Aliases["TDP_toad"]["frmSubMenuControl"]["Find"]("Caption", "Export Wizard*", 2);
+            if(objExportWizard && objExportWizard != undefined && objExportWizard["Exists"])
+            {
+                Log["Message"]("Find the object!");
+                if(objExportWizard["Enabled"])
+                {
+                    //objExport["ClickButton"]();
+                    objExportWizard["SetFocus"]();
+                    objExportWizard["Click"](2, 2);
+                }
+                else
+                    Log["Message"]("The button is not enabled!");
+            }
+            else
+            {
+                Log["Message"]("Do not find the object!");
+            }
+        }
+        else
+            Log["Message"]("The button is not enabled!");
+    }
+    else
+    {
+        Log["Message"]("Do not find the object!");
+    }
+}
+
+function TestMenuItemClick_2()
+{
+    ActivateMainWinForm();
+    
+    Aliases["TDP_toad"]["frmMainForm"]["BarDockControl"]["DockedBarControl"]["ClickItem"]("Tools|Import|Import Wizard...");
+}
+
+function TestMenuItemClick_3()
+{
+    ActivateWinForm(Aliases["TDP_toad"]["ImportWizard"]);//Aliases["TDP_toad"]["ImportWizard"].acti
+    var wizardPageSelectTable = Aliases["TDP_toad"]["ImportWizard"]["wizardImport"]["WinFormsObject"]("wizardPageSelectTable");
+    //wizardPageSelectTable["WinFormsObject"]("panelTargetBottom")["WinFormsObject"]("MapExistingTableControl")["WinFormsObject"]("panel1")["WinFormsObject"]("cbParent")["ClickItem"]("TDP_AUTO");
+    //wizardPageSelectTable["WinFormsObject"]("panelTargetBottom")["WinFormsObject"]("MapExistingTableControl")["WinFormsObject"]("panel1")["WinFormsObject"]("comboBoxEditChildren")["ClickItem"]("ADDRESS");
+    
+    Aliases["TDP_toad"]["ImportWizard"]["wizardImport"]["wpgSelectTable"]["pnlTargetBottom"]["mctrlExistingTable"]["pnlTableSetting"]["cbxDatabase"]["SetValue"]("TDP_AUTO");
+    Aliases["TDP_toad"]["ImportWizard"]["wizardImport"]["wpgSelectTable"]["pnlTargetBottom"]["mctrlExistingTable"]["pnlTableSetting"]["cbxDatabase"]["ClickItem"]("TDP_AUTO");
+    //Aliases["TDP_toad"]["ImportWizard"]["wizardImport"]["wpgSelectTable"]["pnlTargetBottom"]["mctrlExistingTable"]["pnlTableSetting"]["cbxTable"]["SetValue"]("ADDRESS");
+    //Aliases["TDP_toad"]["ImportWizard"]["wizardImport"]["wpgSelectTable"]["pnlTargetBottom"]["mctrlExistingTable"]["pnlTableSetting"]["cbxTable"]["ClickItem"]("ADDRESS");
+    //ButtonClickWithDelay(Aliases["TDP_toad"]["ImportWizard"]["wizardImport"]["pnlButtons"]["btnNext"], 3);
+        
+    //ButtonClickWithDelay(Aliases["TDP_toad"]["ImportWizard"]["wizardImport"]["pnlButtons"]["btnNext"], 3);
+}
+
+//
+function test_FindRow()
+{
+    InitialEnvMain();
+    //ActivateMainWinForm();
+    ActivateWinForm(Aliases["TDP_toad"]["frmMainForm"]["MdiClient"]["frmMdiDocDataCompare"]["PluginForm"]["DataCompareMain"]["Slider2"]);
+    Delay(1000);
+    
+    var findObj = Aliases["TDP_toad"]["frmMainForm"]["MdiClient"]["frmMdiDocDataCompare"]["PluginForm"]["DataCompareMain"]["Find"]("Value", "ACD", 5);
+    Aliases["TDP_toad"]["frmMainForm"]["MdiClient"]["frmMdiDocDataCompare"]["PluginForm"]["DataCompareMain"]["Slider2"]["ComparisonWizardControl"]["DataCompare"]["WizardChooseTables"]["wizardChooseTablesExpand1"]["WinFormsObject"]("grdTables")["ClickCell"](1, "Columns Mapped")
+    if(findObj && findObj != undefined && findObj["Exists"])
+    {
+        Log["Message"]("Find the object!");
+        //findObj["Maximize"]();
+    }
+    else
+    {
+        Log["Message"]("Can't find the object!");
+    }
+}
+
+//
+function test_FindListItem()
+{
+    InitialEnvMain();
+    ActivateMainWinForm();
+    //ActivateWinForm(Aliases["TDP_toad"]["frmMainForm"]["MdiClient"]["frmMdiDocDataCompare"]);
+    Delay(1000);
+    
+    var objFind = Aliases["TDP_toad"]["frmMainForm"]["DockPanel"]["ControlContainer"]
+    ["AnalystBrowserControl"]["xtraTabControlAnalystTool"]["xtraTabPageObjectPalette"]
+    ["objectPaletteControl1"]["leftLeftPanel"]["leftList"]["treeList"]["groupingDataPanel"]
+    ["Find"]("Value", "EXPORTIMPORT", 3);
+    
+    if(objFind && objFind != undefined && objFind["Exists"])
+    {
+        Log["Message"]("Find the object!");
+        //findObj["Maximize"]();
+        
+        objFind["ClickR"](2, 2);
+        if(Aliases["TDP_toad"]["frmSubMenuControl"]["Exists"])
+        {
+            var objFind = Aliases["TDP_toad"]["frmSubMenuControl"]["mctrlPopupMenu"]["Find"]("Caption", "Data Compare", 2);
+            if(objFind && objFind != undefined && objFind["Exists"])
+            {
+                Log["Message"]("Find the object!");
+                
+                if(objFind["Enabled"])
+                {
+                    objFind["ClickButton"]();
+                    
+                    if(Aliases["TDP_toad"]["frmMainForm"]["MdiClient"]["frmMdiDocDataCompare"]["PluginForm"]["DataCompareMain"]["Slider2"]["Exists"])
+                    {
+                        var dpForm = Aliases["TDP_toad"]["frmMainForm"]["MdiClient"]
+                        ["frmMdiDocDataCompare"]["PluginForm"]["DataCompareMain"]["Slider2"]
+                        ["ComparisonWizardControl"]["DataCompare"];
+                        
+                        //
+                        dpForm["pnlButtons"]["btnNext"]["ClickButton"]();
+                        //dpForm["WizardRegisterDB"]["dualConnect1"]["connectPanel"]["Target"]["gbSource"]["cbConnects"]["Open"]["Click"]();
+                        dpForm["WizardRegisterDB"]["dualConnect1"]["connectPanel"]["Target"]["gbSource"]["cbConnects"]["ClickItem"]("ORA10R2 (QUEST_STAGE), QUEST_STAGE");
+                        dpForm["WizardRegisterDB"]["dualConnect1"]["connectPanel"]["Target"]["gbSource"]["teLogin"]["SetText"]("QUEST_STAGE");
+                        dpForm["WizardRegisterDB"]["dualConnect1"]["connectPanel"]["Target"]["gbSource"]["tePass"]["SetText"]("QUEST_STAGE");
+                        dpForm["WizardRegisterDB"]["dualConnect1"]["connectPanel"]["Target"]["gbSource"]["cbSchema"]["ClickItem"]("TDP_AUTO");
+                        
+                        dpForm["pnlButtons"]["btnNext"]["ClickButton"]();
+                        
+                        //WaitingForObjectWithTime(dpForm["pnlButtons"]["btnNext"], 5);
+                        dpForm["WizardChooseTables"]["wizardChooseTablesExpand1"]["WinFormsObject"]("grdTables")["ClickCell"](0, "Columns Mapped");
+                        
+                        var scfceFrom = Aliases["TDP_toad"]["WinFormsObject"]("frmChooseColumns");
+                        WaitingForObjectWithTime(scfceFrom, 5);
+                        var sctpFrom = Aliases["TDP_toad"]["WinFormsObject"]("frmChooseColumns")["WinFormsObject"]("scrTopBottom");
+                        //sctpFrom["Click"](2, 2);
+                        sctpFrom["WinFormsObject"]("SplitGroupPanel", "Panel1")["WinFormsObject"]("grdColumns")["ClickColumnHeader"]("Comparison Key");
+                        if(Sys["Process"]("toad")["WinFormsObject"]("frmChooseColumns")["WinFormsObject"]("btnOK")["Enabled"])
+                        //if(Aliases["TDP_toad"]["wndWindowsForms10Window8app01ca0192r13ad1"]["btnOK"]["Enabled"])
+                        {
+                            Sys["Process"]("toad")["WinFormsObject"]("frmChooseColumns")["WinFormsObject"]("btnOK")["ClickButton"]();
+                            //Aliases["TDP_toad"]["wndWindowsForms10Window8app01ca0192r13ad1"]["btnOK"]["ClickButton"]();
+                        }
+                        else
+                        {
+                            Log["Error"]("Some error");
+                        }
+                        
+                        ButtonClickWithDelay(dpForm["pnlButtons"]["btnNext"], 5);
+                        
+                        // Check Result
+                        var grdResult = Aliases["TDP_toad"]["frmMainForm"]["MdiClient"]
+                        ["frmMdiDocDataCompare"]["PluginForm"]["DataCompareMain"]["Slider2"]
+                        ["ComparisonWizardControl"]["DataCompare"]["WizardComplete"]
+                        ["wizardComplete1"]["tabControl"]["xtraTabResult"]["UIAObject"]("grdResult");
+                        
+                        var Source_Only_row_0   = grdResult["UIAObject"]("Data_Panel")["UIAObject"]("Row_1")["UIAObject"]("Source_Only_row_0")["Value"];
+                        var Different_row_0     = grdResult["UIAObject"]("Data_Panel")["UIAObject"]("Row_1")["UIAObject"]("Different_row_0")["Value"];
+                        var Target_Only_row_0   = grdResult["UIAObject"]("Data_Panel")["UIAObject"]("Row_1")["UIAObject"]("Target_Only_row_0")["Value"];
+                        var Equal_row_0         = grdResult["UIAObject"]("Data_Panel")["UIAObject"]("Row_1")["UIAObject"]("Equal_row_0")["Value"];
+                        if(Source_Only_row_0 != 0 || Different_row_0 != 0 || Target_Only_row_0 != 0)
+                        {
+                            Log["Error"]("The two tables are different!");
+                        }
+                        else if(Equal_row_0 == 0)
+                        {
+                            Log["Error"]("The two tables are empty!");
+                        }
+                        else
+                        {
+                            Log["Message"]("The two tables  are same!");
+                        }
+                        
+                        // Compare reslt, finish.
+                        ButtonClickWithDelay(dpForm["pnlButtons"]["btnNext"], 15);
+                    }
+                }
+            }
+            else
+            {
+                Log["Error"]("Can't find the object!");
+            }
+        }
+        else
+        {
+            Log["Error"]("Can't do the right click!");
+        }
+    }
+    else
+    {
+        Log["Error"]("Can't find the object!");
+    }
+}
+
+//
+function Test_CenterTheWinForm()
+{
+    ActivateWinForm(Aliases["TDP_toad"]["PublishingWizardAero"]);
+    Delay(1000);
+    
+    //Aliases["TDP_toad"]["PublishingWizardAero"]["Move"](1, 1);
+    Aliases["TDP_toad"]["PublishingWizardAero"]["CenterToScreen"]();
+}
+
+//
+function Test_FindTheTreeListItem()
+{
+    ActivateMainWinForm();
+    
+    var objTreeList = Aliases["TDP_toad"]["frmMainForm"]["DockPanel"]
+                    ["ControlContainer"]["AnalystBrowserControl"]["xtraTabControlAnalystTool"]
+                    ["xtraTabPageObjectPalette"]["objectPaletteControl1"]["leftLeftPanel"]
+                    ["leftList"]["treeList"];
+                    
+    //var objTreeListItem = objTreeList["Find"]("Value", "ACHANG11", 3);
+    var objTreeListItem = objTreeList["Find"]("Value", "TTTT", 3);
+    if(objTreeListItem && objTreeListItem != undefined && objTreeListItem["Exists"])
+    {
+        Log["Message"]("Find the object!");
+        objTreeListItem["ClickR"](3, 5);
+        
+        WaitingForObject(Aliases["TDP_toad"]["frmSubMenuControl"]);
+        if(Aliases["TDP_toad"]["frmSubMenuControl"]["Exists"])
+        {
+            var objPublish = Aliases["TDP_toad"]["frmSubMenuControl"]["mctrlPopupMenu"]["Find"]("Caption", "Publish...", 2);
+            if(objPublish && objPublish != undefined && objPublish["Exists"])
+            {
+                Log["Message"]("Find the object!");
+                //objPublish["Click"](3, 5); // it's ok
+                if(objPublish["Enabled"])
+                    objPublish["ClickButton"]();
+                else
+                    Log["Message"]("The button is not enabled!");
+            }
+            else
+            {
+                Log["Message"]("Do not find the object!");
+            }
+        }
+    }
+    else
+    {
+        Log["Message"]("Do not find the object!");
+    }
+}
+
+//
+function Test_ScrollBar()
+{
+    ActivateMainWinForm();
+    
+    var objScrollBar = Aliases["TDP_toad"]["frmMainForm"]["DockPanel"]["ControlContainer"]
+                      ["AnalystBrowserControl"]["xtraTabControlAnalystTool"]["xtraTabPageObjectPalette"]
+                      ["objectPaletteControl1"]["leftLeftPanel"]["leftList"]["treeList"]["VTLScrollBar"];
+                      
+    //Log["Message"](objScrollBar["buttonPageUp"]["Exists"]); // true
+    //Log["Message"](objScrollBar["buttonPageUp"]["Enabled"]); // true
+    //Log["Message"](objScrollBar["buttonPageUp"]["Visible"]); // true
+    //Log["Message"](objScrollBar["buttonPageUp"]["Height"]); // 0 pixels if disappear, 3 pixels per line, 100 pixels per click
+    //Log["Message"](objScrollBar["buttonPageUp"]["Width"]); // 0 pixels if disappear, 17 pixels fixed.
+    
+    //Log["Message"](objScrollBar["buttonPageDown"]["Exists"]);
+    //Log["Message"](objScrollBar["buttonPageDown"]["Enabled"]);
+    //Log["Message"](objScrollBar["buttonPageDown"]["Visible"]);
+    //Log["Message"](objScrollBar["buttonPageDown"]["Height"]);
+    //Log["Message"](objScrollBar["buttonPageDown"]["Width"]);
+    
+    //Log["Message"](objScrollBar["indicatorPosition"]["Exists"]);
+    //Log["Message"](objScrollBar["indicatorPosition"]["Enabled"]);
+    //Log["Message"](objScrollBar["indicatorPosition"]["Visible"]);
+    //Log["Message"](objScrollBar["indicatorPosition"]["Height"]);
+    //Log["Message"](objScrollBar["indicatorPosition"]["Width"]);
+}
+
+//
+function Test_FindTheListItem()
+{
+    ActivateMainWinForm();
+    
+    var bFind           = false;
+    var bEnd            = false;
+    
+    var objScrollBar = Aliases["TDP_toad"]["frmMainForm"]["DockPanel"]["ControlContainer"]
+                        ["AnalystBrowserControl"]["xtraTabControlAnalystTool"]["xtraTabPageObjectPalette"]
+                        ["objectPaletteControl1"]["leftLeftPanel"]["leftList"]["treeList"]["VTLScrollBar"];
+                        
+    var objTreeList = Aliases["TDP_toad"]["frmMainForm"]["DockPanel"]["ControlContainer"]
+                        ["AnalystBrowserControl"]["xtraTabControlAnalystTool"]["xtraTabPageObjectPalette"]
+                        ["objectPaletteControl1"]["leftLeftPanel"]["leftList"]["treeList"];
+    
+    do
+    {
+        //var objTreeListItem = objTreeList["Find"]("Value", "ACHANG11", 3);
+        var objTreeListItem = objTreeList["Find"]("Value", "article", 3);
+        if(objTreeListItem && objTreeListItem != undefined && objTreeListItem["Exists"])
+        {
+            Log["Message"]("Find the object!");
+            objTreeListItem["ClickR"](3, 5);
+        
+            WaitingForObject(Aliases["TDP_toad"]["frmSubMenuControl"]);
+            if(Aliases["TDP_toad"]["frmSubMenuControl"]["Exists"])
+            {
+                var objPublish = Aliases["TDP_toad"]["frmSubMenuControl"]["mctrlPopupMenu"]["Find"]("Caption", "Publish...", 2);
+                if(objPublish && objPublish != undefined && objPublish["Exists"])
+                {
+                    Log["Message"]("Find the object!");
+                    //objPublish["Click"](3, 5); // it's ok
+                    if(objPublish["Enabled"])
+                        objPublish["ClickButton"]();
+                    else
+                        Log["Message"]("The button is not enabled!");
+                }
+                else
+                {
+                    Log["Message"]("Do not find the object!");
+                }
+            }
+            
+            bFind = true;
+            bEnd = true;
+        }
+        else
+        {
+            Log["Message"]("Do not find the object!");
+            Log["Message"](objScrollBar["buttonPageDown"]["Height"]);
+            
+            if(objScrollBar["buttonPageDown"]["Height"] > 0)
+            {
+                objScrollBar["buttonPageDown"]["ClickButton"]();
+            }
+            else
+            {
+                bEnd = true;
+                //break;
+            }
+        }
+    //}while(bFind == false && objScrollBar["buttonPageDown"]["Height"] > 0)
+    }while(bEnd == false)
+}
+
+//
+function Test_Return(nValue)
+{
+    return nValue, nValue * 2, nValue * 3;
+}
+
+//the function only can retrive one result.
+//if you want to get more than one result, use parameters.
+function Test_Return_()
+{
+    Log["Message"](Test_Return(2));
+    
+    var a = 1;
+    var b = 2;
+    var c = 3;
+    a, b, c = Test_Return(2);
+    Log["Message"](a);
+    Log["Message"](b);
+    Log["Message"](c);
+    Log["Message"](a , b , c);
+}
+
+//
+function Test_ProcessErrorDialog()
+{
+    //Aliases["TDP_toad"]["frmBaseModal"]["frmConfirmation"]["lblMessage"];
+    
+    ActivateWinForm(Aliases["TDP_toad"]["frmBaseModal"]);
+    //WaitingForObjectWithTime(Aliases["TDP_toad"]["frmBaseModal"], 5);
+    if(Aliases["TDP_toad"]["frmBaseModal"]["Exists"])
+    {
+        //Aliases["TDP_toad"]["frmBaseModal"]["frmConfirmation"]["cbxDontShow"]["ClickButton"](cbChecked); // DO NOT uncomment this comment.
+        if(Aliases["TDP_toad"]["frmBaseModal"]["frmConfirmation"]["lblMessage"]["Caption"] == "There was an error publishing your object.")
+        {
+            Log["Message"]("There was an error publishing your object.");
+            // TODO: tack a picture.
+        }
+        else
+        {
+            // TODO: check
+            Log["Message"]("The publishing is Done!");
+        }
+        
+        Aliases["TDP_toad"]["frmBaseModal"]["frmConfirmation"]["pnlButton"]["btnOk"]["ClickButton"]();
+    }
+}
+
+//
+//USEUNIT Common
+function Test_SendKeys()
+{
+    //SendKeys("");
+    //Sys["Keys"]("^[F4]");
+    //Log["Message"]('...');
+    
+    ActivateMainWinForm();
+    Sys["Keys"]("^[F4]");
+    Aliases["TDP_toad"]["frmBaseModal"]["frmConfirmation"]["pnlButton"]["btnNo"]["ClickButton"]();
+}
+
+function Test_Reconnect()
+{
+    ActivateMainWinForm();
+    Reconnect("ORA10R2");
+}
+
+function Test_ClickMouse_Desktop()
+{
+    ActivateMainWinForm();
+    Delay(2000);
+    
+    Sys["Desktop"]["MouseDown"](VK_LBUTTON, Sys["Desktop"]["MouseX"], Sys["Desktop"]["MouseY"]);
+    Sys["Desktop"]["MouseUp"](VK_LBUTTON, Sys["Desktop"]["MouseX"], Sys["Desktop"]["MouseY"]);
+}
+
+//
+function TestLogWithParameter()
+{
+    Log["Message"](test);
+}
+
+//test menu item click
+function TestMenuItemClick2()
+{
+    ActivateMainWinForm();
+    Delay(2000);
+    
+    var menuBar = Aliases["TDP_toad"]["frmMainForm"]["BarDockControl"]["DockedBarControl"];
+    menuBar["ClickItem"]('Tools');
+    SendKeys(['[Down]', '[Enter]', '[Enter]'], [8, 1, 1]);
+    //SendKeys(['[Down]', '[Enter]', '[Down]', '[Enter]'], [8, 1, 1, 1]);
+    //SendKeys(['[Down]', '[Enter]', '[Down]', '[Enter]'], [8, 1, 2, 1]);
+}

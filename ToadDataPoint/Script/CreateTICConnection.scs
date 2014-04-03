@@ -1,0 +1,200 @@
+﻿///////////////////////////////////////////////////////////////////////////////////////
+//
+//  Unit Name     : CreateTICConnection
+//  Author        : Roy T.Burns(Royburns.Peng@software.dell.com)
+//  Create Date   : July 25, 2013
+//  Last Modify   : 
+//  Description   : Test Step -- Create a connection to TIC.
+//
+//    All rights reserved by TDP Team.
+//
+///////////////////////////////////////////////////////////////////////////////////////
+
+//USEUNIT TDPCommon
+//USEUNIT Variable
+//USEUNIT InitialEnv
+
+// variable
+var s_strFunctionPoint        = "CreateConnections"; // the name of function point name, use it for folder name. 
+var s_strTestConfig           = "CreateConnections.xls";
+
+// Column of excel
+var DisplayName               = undefined;
+var TICServerPort             = undefined;
+var AppServerPort             = undefined;
+var UserType                  = undefined;
+var UserName                  = undefined;
+var Password                  = undefined;
+var FullName                  = undefined;
+var Email                     = undefined;
+var ConfirmPassword           = undefined;
+var Name                      = undefined;
+var Comment                   = undefined;
+
+//-------------------------------------------------------------------------------------
+//Function Name : CreateTICConnection
+//Author        : Roy T.Burns
+//Create Date   : July 25, 2013
+//Last Modify   : 
+//Description   : Main function of the current test case.
+//Parameter     : nID -- test case id, define in excel.
+//Return        : null
+//-------------------------------------------------------------------------------------
+function CreateTICConnection(nID)
+{
+    var strConfigFile     = g_strProjectTestConfig + "\\" + s_strFunctionPoint + "\\" + s_strTestConfig;
+    var strSheetName      = "CreateTICConnection"; // test step name, use it for sheet name
+    var objDict           = new ActiveXObject("Scripting.Dictionary");
+    var strConnectName    = "";
+    
+    var bResult           = false;
+    
+    try
+    {
+        BeginLogFolder(arguments);
+        
+        InitialEnvMain();
+        ActivateMainWinForm();
+        Delay(1000);
+    
+        //Get configuration from Excel
+        if(GetDataFromExcelByID(strConfigFile, strSheetName, nID, objDict))
+        {
+            DisplayName           = objDict["Item"]("DisplayName");
+            TICServerPort         = objDict["Item"]("TICServerPort");
+            AppServerPort         = objDict["Item"]("AppServerPort");
+            UserType              = objDict["Item"]("UserType");
+            UserName              = objDict["Item"]("UserName");
+            Password              = objDict["Item"]("Password");
+            FullName              = objDict["Item"]("FullName");
+            Email                 = objDict["Item"]("Email");
+            ConfirmPassword       = objDict["Item"]("ConfirmPassword");
+            Name                  = objDict["Item"]("Name");
+            Comment               = objDict["Item"]("Comment");
+            
+            if(Name != undefined && Name != "")
+            {
+                strConnectName  = Name;
+            }
+            else
+            {
+                //root@localhost
+                strConnectName  = UserName + "@" + DisplayName;
+            }
+        }
+        
+        var frmConnection = Aliases["TDP_toad"]["frmMainForm"]["DockPanel"]
+                                ["ControlContainer"]["AnalystBrowserControl"]
+                                ["connectionManagerControl1"]["connectionControl1"];
+                                
+        var objFind = frmConnection["connectionList"]["groupingDataPanel"]["Find"]("Value", strConnectName);
+        if(objFind && objFind != undefined && objFind["Exists"])
+        {
+            Log["Message"]("The connection is exists!");
+            Reconnect(strConnectName);
+        }
+        else
+        {
+            Log["Message"]("The connection is not exists. Waiting to connect...");
+            
+            frmConnection["BarDockControl"]["DockedBarControl"]["btnCreate"]["ClickButton"]();
+            var pnlProviderTop = Aliases["TDP_toad"]["frmConnectionProperties"]["pnlConnectionProperties"]
+                                ["pnlProviderTop"];
+    
+            WaitingForObjectWithTime(pnlProviderTop["groupSelectionControl1"], 5);
+            if(pnlProviderTop["groupSelectionControl1"])
+            {
+                //pnlProviderTop["groupSelectionControl1"]["Click"](96, 6);
+                //ClickTreeListItem(Aliases["TDP_toad"]["PopupContainerForm"]["PopupContainerControl"]["groupTree"], "Value", "Intelligence Central", 5);
+                Sys["Keys"]("Intelligence Central");
+                Sys["Keys"]('[Enter]');
+                
+                var objLogin = Aliases["TDP_toad"]["frmConnectionProperties"]
+                              ["pnlConnectionProperties"]["pnlControl"]
+                              ["pnlTeamServerConnection"]["xtraTabControlAdvanced"]
+                              ["xtabpageLogin"];
+                              
+                objLogin["pnlHost"]["btneHost"]["tbxMaskBox"]["SetText"](DisplayName);
+                objLogin["pnlUser"]["tetUser"]["tbxMaskBox"]["SetText"](UserName);
+                objLogin["pnlPassword"]["tetPassword"]["tbxMaskBox"]["SetText"](Password);
+                objLogin["pnlTCP"]["tcpPort"]["tbPort"]["Click"]();
+                Sys["Keys"](TICServerPort);
+                objLogin["pnlTCP"]["tcpPort"]["tbPort"]["Click"]();
+                
+                var pnlProviderBtm = Aliases["TDP_toad"]["frmConnectionProperties"]["pnlConnectionProperties"]
+                                    ["pnlProviderBottom"];
+                if(strConnectName != undefined && strConnectName != "")
+                {
+                    pnlProviderBtm["btneName"]["tbxMaskBox"]["SetText"](strConnectName);
+                }
+                pnlProviderBtm["cbxSavePassword"]["ClickButton"](cbChecked);
+                Aliases["TDP_toad"]["frmConnectionProperties"]["btnConnect"]["ClickButton"]();
+            }
+            
+            WaitingForObjectWithTime(Aliases["TDP_toad"]["frmMainForm"], 5);
+            if(Aliases["TDP_toad"]["frmMainForm"]["CanFocus"] == true)
+            {
+                Log["Message"]("Success!");
+            }
+            else
+            {
+                Log["Message"]("Have something Unexpected Dialog to process!");
+                //...
+                
+                // TDP is not match the right TIC version.
+                WaitingForObjectWithTime(Aliases["TDP_toad"]["frmBaseModal"], 5);
+                if(Aliases["TDP_toad"]["frmBaseModal"]["Exists"])
+                {
+                    var MsgInfo2_1 = "This version (2.1.0.353) of Intelligence Central server is not compatible with Toad Data Point. You will be able to view and query objects, but not publish new objects or edit existing objects. To publish or edit objects, please use version 2.2 of Intelligence Central.";
+                    var MsgInfo2_2 = "This version (2.2.0.48) of Intelligence Central server is not compatible with Toad Data Point. You will be able to view and query objects, but not publish new objects or edit existing objects. To publish or edit objects, please use version 2.1 of Intelligence Central.";
+                    var strCaption = Aliases["TDP_toad"]["frmBaseModal"]["frmConfirmation"]["lblMessage"]["Caption"];
+                    
+                    if(strCaption == MsgInfo2_1)
+                    {
+                        Log["Warning"](MsgInfo2_1);
+                        // TODO: tack a picture.
+                    }
+                    else if(strCaption == MsgInfo2_2)
+                    {
+                        Log["Warning"](MsgInfo2_2);
+                        // TODO: tack a picture.
+                    }
+                    else
+                    {
+                        // TODO: check
+                        //Log["Message"]("The publishing is Done!");
+                        //Log["Error"]("Unexpected Dialog to process! Please check it.");
+                        // Different version of TIC
+                        WaitingForObjectWithTime(Aliases["TDP_toad"]["frmBaseModal"]["frmConfirmation"]["pnlButton"]["btnOk"], 5);
+                        if(Aliases["TDP_toad"]["frmBaseModal"]["frmConfirmation"]["pnlButton"]["btnOk"]["Exists"])
+                        {
+                            Aliases["TDP_toad"]["frmBaseModal"]["frmConfirmation"]["pnlButton"]["btnOk"]["ClickButton"]();
+                        }
+                    }
+                    
+                    if(Aliases["TDP_toad"]["frmBaseModal"]["frmConfirmation"]["pnlButton"]["btnOk"]["Exists"])
+                    {
+                        Aliases["TDP_toad"]["frmBaseModal"]["frmConfirmation"]["pnlButton"]["btnOk"]["ClickButton"]();
+                    }
+                }
+            }
+        }
+    }
+    catch(e)
+    {
+        Log["Error"](e.description);
+        //Runner["Stop"]();
+    }
+    finally
+    {
+        EndLogFolder();
+    }
+}
+
+// Main function for test.
+/* This function is only for DEBUG. DO NOT set it in the test group!!!
+function Main()
+{
+    CreateTICConnection(nID);
+}
+//*/

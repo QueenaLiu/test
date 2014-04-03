@@ -1,0 +1,60 @@
+﻿///////////////////////////////////////////////////////////////////////////////////////
+//
+//  Unit Name     : ExportWithTemplate
+//  Author        : Roy T.Burns(Royburns.Peng@software.dell.com)
+//  Create Date   : Oct 10, 2013
+//  Last Modify   : 
+//  Description   : Test Step -- Export with template.
+//
+//    All rights reserved by TDP Team.
+//
+///////////////////////////////////////////////////////////////////////////////////////
+
+//USEUNIT Common
+//USEUNIT TDPCommon
+//USEUNIT Variable
+
+//-------------------------------------------------------------------------------------
+//Function Name : ExportWithTemplate
+//Author        : Hugo He
+//Create Date   : July 25, 2013
+//Last Modify   : 
+//Description   : Export with template
+//Parameter     : strTemplateName   -->  Template name
+//Return        : boolean
+//-------------------------------------------------------------------------------------
+function ExportWithTemplate(strTemplateName)
+{
+    var bReturn = true;
+    //Controls
+    var menuBar;
+    
+    try
+    {
+        BeginLogFolder(arguments);
+        
+        menuBar = Aliases["TDP_toad"]["frmMainForm"]["BarDockControl"]["DockedBarControl"];
+        menuBar["ClickItem"]("Tools");
+        SendKeys(['[Down]', '[Enter]', '[Down]', '[Enter]'], [7, 1, 2, 1]);
+
+        Aliases["TDP_toad"]["dlgOpenExportTemplateFile"]["pnlFileName"]["cbxFileName"]["SetText"](strTemplateName);
+        Aliases["TDP_toad"]["dlgOpenExportTemplateFile"]["Open"]["Click"]();
+        
+        WaitingForObjectWithTime(Aliases["TDP_toad"]["frmBaseModal"], 5);
+        if(Aliases["TDP_toad"]["frmBaseModal"]["Exists"])
+        {
+            Aliases["TDP_toad"]["frmBaseModal"]["frmConfirmation"]["pnlButton"]["btnOk"]["Click"]();
+        }
+    }
+    catch(e)
+    {
+        bResult = false;
+        Log["Error"](e["description"]);
+        throw e;
+    }
+    finally
+    {
+        EndLogFolder();
+    }
+    return bReturn;
+}

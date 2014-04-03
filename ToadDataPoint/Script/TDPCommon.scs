@@ -1,0 +1,1392 @@
+﻿///////////////////////////////////////////////////////////////////////////////////////
+//
+//  Unit Name     : TDPCommon
+//  Author        : Roy T.Burns(Royburns.Peng@software.dell.com)
+//  Create Date   : July 25, 2013
+//  Last Modify   : 
+//  Description   : The functions only for current project(TDP).
+//
+//    All rights reserved by TDP Team.
+//
+///////////////////////////////////////////////////////////////////////////////////////
+
+//USEUNIT Common
+//USEUNIT Variable
+//USEUNIT ExcelOperator
+
+//-------------------------------------------------------------------------------------
+//Function Name : LaunchTestedApp
+//Author        : Roy T.Burns
+//Description   : Launch the tested application by index
+//Parameter     : nTestedAppIndex
+//Return        : null
+//-------------------------------------------------------------------------------------
+function LaunchTestedApp(nTestedAppIndex)
+{
+    try
+    {
+        BeginLogFolder(arguments);
+    
+        var TestedApp = TestedApps["Items"](nTestedAppIndex);
+        TestedApp.Run();
+        Delay(500);
+    }
+  	catch(e)
+  	{
+  		  Log["Error"](e["description"]);
+  	}
+  	finally
+  	{
+  		  EndLogFolder();
+  	}
+}
+
+//-------------------------------------------------------------------------------------
+//Function Name : ActivateMainWinForm
+//Author        : Roy T.Burns
+//Description   : Activate the main window form
+//Parameter     : null
+//Return        : null
+//-------------------------------------------------------------------------------------
+function ActivateMainWinForm()
+{
+    try
+    {
+        BeginLogFolder(arguments);
+        
+        Delay(2000);
+        WaitingForObject(NameMapping["Sys"]["Process"]("toad")["WinFormsObject"]("MainForm"));
+    
+        if(NameMapping["Sys"]["Process"]("toad")["WinFormsObject"]("MainForm")["Exists"])
+        {
+           NameMapping["Sys"]["Process"]("toad")["WinFormsObject"]("MainForm")["Activate"]();
+           NameMapping["Sys"]["Process"]("toad")["WinFormsObject"]("MainForm")["Maximize"]();
+        }
+    }
+  	catch(e)
+  	{
+  		  Log["Error"](e["description"]);
+  	}
+  	finally
+  	{
+  		  EndLogFolder();
+  	}
+}
+
+//-------------------------------------------------------------------------------------
+//Function Name : ActivateWinForm
+//Author        : Roy T.Burns
+//Description   : Activate the main window form
+//Parameter     : The winform to be waited.
+//Return        : null
+//-------------------------------------------------------------------------------------
+function ActivateWinForm(objWinForm)
+{
+    try
+    {
+        BeginLogFolder(arguments);
+        
+        WaitingForObject(objWinForm);
+    
+        if(objWinForm["Exists"])
+        {
+
+            objWinForm["Activate"]();
+       
+            var btRestore = objWinForm["Find"]("Caption", "Restore", 2);
+            if(btRestore && btRestore != undefined && btRestore["Exists"])
+            {
+                Log["Message"]("Find the object!");
+                objWinForm["Maximize"]();
+            }
+            else
+            {
+                //Log["Message"]("Can't find the object!");
+            }
+        }
+    }
+  	catch(e)
+  	{
+  		  Log["Error"](e["description"]);
+  	}
+  	finally
+  	{
+  		  EndLogFolder();
+  	}
+}
+
+//-------------------------------------------------------------------------------------
+//Function Name : AddTestedApp
+//Author        : Roy T.Burns
+//Description   : Add the tested application into the variables list and TestedAdds.
+//Parameter     : strInstallPath
+//Parameter     : strAppName
+//Return        : null
+//-------------------------------------------------------------------------------------
+function AddTestedApp(strInstallPath, strAppName)
+{
+    var strFullPath;
+    var nTestedAppIndex;
+    
+    try
+    {
+        BeginLogFolder(arguments);
+        
+        strFullPath = strInstallPath + strAppName;
+        nTestedAppIndex = TestedApps["Add"](strFullPath);
+    
+        Project["Variables"]["GlobalVariables"]["Item"](1, 1) = nTestedAppIndex;
+    }
+  	catch(e)
+  	{
+  		  Log["Error"](e["description"]);
+  	}
+  	finally
+  	{
+  		  EndLogFolder();
+  	}    
+    return nTestedAppIndex;
+}
+
+//-------------------------------------------------------------------------------------
+//Function Name : DelTestedAppByIndex
+//Author        : Roy T.Burns
+//Description   : Delete the tested application from the TestedAdds, by Index.
+//Parameter     : nIndex
+//Return        : null
+//-------------------------------------------------------------------------------------
+function DelTestedAppByIndex(nIndex)
+{
+    try
+    {
+        BeginLogFolder(arguments);
+        
+        TestedApps["Delete"](nIndex);
+        Project["Variables"]["GlobalVariables"]["Item"](1, 1) = -1;
+    }
+  	catch(e)
+  	{
+  		  Log["Error"](e["description"]);
+  	}
+  	finally
+  	{
+  		  EndLogFolder();
+  	}
+}
+
+//-------------------------------------------------------------------------------------
+//Function Name : DelTestedAppByName
+//Author        : Roy T.Burns
+//Description   : Delete the tested application from the TestedAdds, by Name.
+//Parameter     : strFullName
+//Return        : null
+//-------------------------------------------------------------------------------------
+function DelTestedAppByName(strFullName)
+{
+    try
+    {
+        BeginLogFolder(arguments);
+        
+        var nIndex = TestedApps["Find"](strFullName);
+        if(nIndex != -1)
+            TestedApps["Delete"](nIndex);
+        Project["Variables"]["GlobalVariables"]["Item"](1, 1) = -1;
+    }
+  	catch(e)
+  	{
+  		  Log["Error"](e["description"]);
+  	}
+  	finally
+  	{
+  		  EndLogFolder();
+  	}
+}
+
+//-------------------------------------------------------------------------------------
+//Function Name : ClearTestedApp
+//Author        : Roy T.Burns
+//Description   : Delete all the tested application from the TestedAdds.
+//Parameter     : null
+//Return        : null
+//-------------------------------------------------------------------------------------
+function ClearTestedApp()
+{
+    try
+    {
+        BeginLogFolder(arguments);
+    TestedApps["Clear"]();
+    Project["Variables"]["GlobalVariables"]["Item"](1, 1) = -1;
+    }
+  	catch(e)
+  	{
+  		  Log["Error"](e["description"]);
+  	}
+  	finally
+  	{
+  		  EndLogFolder();
+  	}
+}
+
+//-------------------------------------------------------------------------------------
+//Function Name : OnStartTest
+//Author        : Roy T.Burns
+//Description   : Test Engine Events Handler -- Initial the test.
+//Parameter     : Sender
+//Return        : null
+//-------------------------------------------------------------------------------------
+function OnStartTest(Sender)
+{
+    try
+    {
+        BeginLogFolder(arguments);
+        
+        Log["Message"]("Initialling...")
+        StartTime();
+    }
+  	catch(e)
+  	{
+  		  Log["Error"](e["description"]);
+  	}
+  	finally
+  	{
+  		  EndLogFolder();
+  	}
+}
+
+//-------------------------------------------------------------------------------------
+//Function Name : OnStopTest
+//Author        : Roy T.Burns
+//Description   : Test Engine Events Handler -- Cleanup the test.
+//Parameter     : Sender
+//Return        : null
+//-------------------------------------------------------------------------------------
+function OnStopTest(Sender)
+{
+    try
+    {
+        BeginLogFolder(arguments);
+        
+        ClearTestedApp();
+        Log["Message"]("Cleanup...");
+        EndTime();
+    }
+  	catch(e)
+  	{
+  		  Log["Error"](e["description"]);
+  	}
+  	finally
+  	{
+  		  EndLogFolder();
+  	}
+}
+
+//-------------------------------------------------------------------------------------
+//Function Name : WaitingForObject
+//Author        : Roy T.Burns
+//Description   : Waiting for the object to be operate.
+//Parameter     : objWaitingFor
+//Return        : null
+//-------------------------------------------------------------------------------------
+function WaitingForObject(objWaitingFor)
+{
+    var i = 0;
+    
+    try
+    {
+        BeginLogFolder(arguments);
+        
+        do
+        {
+            if(i < 600)
+            {
+                Delay(1000);
+                i++;
+            }
+            else
+            {
+                break;
+            }
+        }while(!objWaitingFor["Exists"] || !objWaitingFor["Enabled"])
+    }
+  	catch(e)
+  	{
+  		  Log["Error"](e["description"]);
+  	}
+  	finally
+  	{
+  		  EndLogFolder();
+  	}
+}
+
+//-------------------------------------------------------------------------------------
+//Function Name : WaitingForObjectWithTime
+//Author        : Roy T.Burns
+//Description   : Waiting for the object to be operate.
+//Parameter     : objWaitingFor
+//Parameter     : nSecond -- waiting time(second)
+//Return        : null
+//-------------------------------------------------------------------------------------
+function WaitingForObjectWithTime(objWaitingFor, nSecond)
+{
+    var i = 0;
+    
+    try
+    {
+        BeginLogFolder(arguments);
+        
+        do
+        {
+            if(i < nSecond)
+            {
+                Delay(1000);
+                i++;
+                Log["Message"]("Waiting the object...");
+            
+                var objPicture = Sys["Desktop"]["Picture"]();
+                Log["Picture"](objPicture, "Screen Image");
+            }
+            else
+            {
+                Log["Message"]("Game Over! can not find the object...");
+            
+                var objPicture = Sys["Desktop"]["Picture"]();
+                Log["Picture"](objPicture, "Screen Image");
+                break;
+            }
+        }while(!objWaitingFor["Exists"] || !objWaitingFor["Enabled"])
+    }
+  	catch(e)
+  	{
+  		  Log["Error"](e["description"]);
+  	}
+  	finally
+  	{
+  		  EndLogFolder();
+  	}
+}
+
+//-------------------------------------------------------------------------------------
+//Function Name : ButtonClickWithDelay
+//Author        : Roy T.Burns
+//Description   : Click the button, with delay time.
+//Parameter     : button
+//Parameter     : delay -- waiting time(second)
+//Return        : null
+//-------------------------------------------------------------------------------------
+function ButtonClickWithDelay(button, nSecond)
+{
+    //Delay(delay * 1000);
+    var i = 0
+    
+    try
+    {
+        BeginLogFolder(arguments);
+        
+        do
+        {
+            if(i < nSecond)
+            {
+                Delay(1000);
+                i++;
+            
+                Log["Message"]("Waiting the Button...");
+            
+                var objPicture = Sys["Desktop"]["Picture"]();
+                Log["Picture"](objPicture, "Screen Image");
+            }
+            else
+            {
+                Log["Message"]("Game Over! can not find the object...");
+            
+                var objPicture = Sys["Desktop"]["Picture"]();
+                Log["Picture"](objPicture, "Screen Image");
+                break;
+            }
+        }while(!button["Exists"] || !button["Enabled"])
+    
+        if(button["Exists"] && button["Enabled"])
+            button["ClickButton"]();
+    }
+  	catch(e)
+  	{
+  		  Log["Error"](e["description"]);
+  	}
+  	finally
+  	{
+  		  EndLogFolder();
+  	}
+}
+
+
+//-------------------------------------------------------------------------------------
+//Function Name : GetConnection
+//Author        : Hugo He
+//Create Date   : Sept 13, 2013
+//Last Modify   : 
+//Description   : Get connection from connection list
+//Parameter     : strConnName
+//Return        : Connection
+//-------------------------------------------------------------------------------------
+function GetConnection(strConnName)
+{
+    var objConn;
+    var scrollBar, pageUp, pageDown, pnlConnList, arrObjCollapsed, objCollapsed;
+
+    try
+    {
+        BeginLogFolder(arguments);
+        
+        scrollBar = Aliases["TDP_toad"]["frmMainForm"]["DockPanel"]
+                        ["ControlContainer"]["AnalystBrowserControl"]["connectionManagerControl1"]
+                        ["connectionControl1"]["connectionList"]["ScrollBar"];
+        pageUp = scrollBar["ScrollBar_Page_Up"];
+        pageDown = scrollBar["ScrollBar_Page_Down"];
+        pnlConnList = Aliases["TDP_toad"]["frmMainForm"]["DockPanel"]["ControlContainer"]["AnalystBrowserControl"]
+                      ["connectionManagerControl1"]["connectionControl1"]["connectionList"]["groupingDataPanel"];
+    
+        if (scrollBar["Exists"] && scrollBar["VisibleOnScreen"])
+        {
+            //scroll up to the top
+            while (pageUp["Height"] > 0)
+                pageUp["Click"]();
+            //scroll down to find object
+            do
+            {
+                //Find connect
+                objConn = pnlConnList["FindChild"]('Value', strConnName, 2, true);
+                if (objConn["Exists"] && objConn["VisibleOnScreen"])
+                {
+                    break;
+                }
+                if (pageDown["Height"] > 0)
+                {
+                    pageDown["Click"]();
+                    Aliases["RefreshMappingInfo"]();
+                }
+                else
+                {
+                    break;
+                }
+            } while (true)
+        }
+        else
+        {
+            objConn = pnlConnList["FindChild"]('Value', strConnName, 2, true);
+        }
+    }
+  	catch(e)
+  	{
+  		  Log["Error"](e["description"]);
+  	}
+  	finally
+  	{
+  		  EndLogFolder();
+  	}
+    
+    return objConn;
+}
+
+//-------------------------------------------------------------------------------------
+//Function Name : Reconnect
+//Author        : Hugo.He
+//Create Date   : Aug 7, 2013
+//Last Modify   : 
+//                Fri 11/29/2013(Roy T.Burns)
+//Description   : Reconnect the connection.
+//Parameter     : strConnName -- the string of connection which to be reconnected. 
+//Return        : true -- succeed; false -- failed.
+//-------------------------------------------------------------------------------------
+function Reconnect(strConnName)
+{
+    var bResult         = false;
+    var objConn         = undefined;
+    var btConnect       = undefined;
+    var btReConnect     = undefined;
+    
+    Log["Message"]("Reconnecting to " + strConnName);
+    
+    try
+    {
+        BeginLogFolder(arguments);
+        
+        Log["Message"]("Reconnecting to" + strConnName);
+        objConn = GetConnection(strConnName);
+        if (!objConn["Exists"])
+        {
+            throw new Error('Connection \"' + strConnName + '\" does not exist.');
+        }
+        
+        objConn["ClickR"]();
+        btConnect = Aliases["TDP_toad"]["frmSubMenuControl"]["mctrlPopupMenu"]["Find"]("Caption", "Connect");
+        btReConnect = Aliases["TDP_toad"]["frmSubMenuControl"]["mctrlPopupMenu"]["Find"]("Caption", "Reconnect");
+        
+        if(btReConnect && btReConnect["Enabled"]) 
+        {
+            btReConnect["ClickButton"]();
+            Log["Message"]("Reconnect [" + strConnName + "] !");
+            
+            // Different version of TIC
+            WaitingForObjectWithTime(Aliases["TDP_toad"]["frmBaseModal"], 3);
+            if(Aliases["TDP_toad"]["frmBaseModal"]["Exists"])
+            {
+                Aliases["TDP_toad"]["frmBaseModal"]["frmConfirmation"]["pnlButton"]["btnOk"]["ClickButton"]();
+            }
+        }
+        else
+        {
+            Log["Message"]("Failed to Reconnect");
+            if(btConnect && btConnect["Enabled"])
+            {
+                Log["Message"]("Connected [" + strConnName + "] !");
+                btConnect["ClickButton"]();
+                
+                // Different version of TIC
+                WaitingForObjectWithTime(Aliases["TDP_toad"]["frmBaseModal"], 3);
+                if(Aliases["TDP_toad"]["frmBaseModal"]["Exists"])
+                {
+                    Aliases["TDP_toad"]["frmBaseModal"]["frmConfirmation"]["pnlButton"]["btnOk"]["ClickButton"]();
+                }
+            }
+            else
+            {
+                Log["Message"]("Failed to Connect [" + strConnName + "] !");
+            }
+        }
+        
+        //obj["Parent"]["Parent"]["Parent"]["XtraPopupMenu"]["Click"]('Reconnect');
+        Delay(2000);
+        bResult = true;
+    }
+    catch(e)
+    {
+        bResult = false;
+        Log["Error"](e["description"]);
+        //throw e;
+    }
+    finally
+    {
+        EndLogFolder();
+    }
+    return bResult;
+}
+
+//-------------------------------------------------------------------------------------
+//Function Name : ClickTreeListItem
+//Author        : Roy T.Burns
+//Create Date   : Aug 7, 2013
+//Last Modify   : 
+//Description   : Get test data from excel.
+//Parameter     : objTreeList -- Tree List object 
+//Parameter     : objPropName -- property name
+//Parameter     : objPropValue -- property value
+//Parameter     : nDepth -- find depth
+//Return        : None
+//Example       : ClickTreeListItem(Aliases["TDP_toad"]["PopupContainerForm"]
+//                ["PopupContainerControl"]["groupTree"], "Value", "Sybase ASE", 5)
+//NOTICE        : If you use this function, make sure that the "page down" button 
+//                of the scrollbar is named "Page_Down" in the NameMapping.
+//-------------------------------------------------------------------------------------
+function ClickTreeListItem(objTreeList, objPropName, objPropValue, nDepth)
+{
+    var bFind           = false;
+    var bEnd            = false;
+    
+    try
+    {
+        BeginLogFolder(arguments);
+        
+        Log["Message"]("Finding the " + objPropValue + "...");
+        if(!objTreeList["Exists"])
+        {
+            throw new Error("Argument objTreeList does not exist!");;
+        }
+    
+        var objScrollBar = objTreeList["VTLScrollBar"];
+    
+        do
+        {
+            var objTreeListItem = objTreeList["groupingDataPanel"]["Find"](objPropName, objPropValue, nDepth);
+            if(objTreeListItem && objTreeListItem != undefined && objTreeListItem["Exists"])
+            {
+                Log["Message"]("Find the object!");
+                objTreeListItem["Click"](3, 5);
+            
+                bFind = true;
+                bEnd = true;
+            }
+            else
+            {
+                Log["Message"]("Do not find the object!");
+                Log["Message"](objScrollBar["Page_Down"]["Height"]);
+            
+                if(objScrollBar["Page_Down"]["Height"] > 0)
+                {
+                    Log["Message"]("Can not find the object! Going on...");
+                    objScrollBar["Page_Down"]["Click"]();
+                }
+                else
+                {
+                    Log["Message"]("Can not find the object! Leave away...");
+                    bEnd = true;
+                }
+            }
+        }while(bEnd == false);
+    }
+  	catch(e)
+  	{
+  		  Log["Error"](e["description"]);
+  	}
+  	finally
+  	{
+  		  EndLogFolder();
+  	}
+    
+    return bFind;
+}
+
+//-------------------------------------------------------------------------------------
+//Function Name : CheckResult_ImportExport
+//Author        : Roy T.Burns
+//Create Date   : Oct 10, 2013
+//Last Modify   : 
+//Description   : To check the result of Import or Export.
+//Parameter     : nOpType -- Operation type. (0 -- import; 1 -- export.)
+//Parameter     : strTableName --  the table to imported/exported.
+//Return        : null
+//-------------------------------------------------------------------------------------
+function CheckResult_ImportExport(nOpType, strTableName)
+{
+    var strOpType       = undefined;
+    var lvResults       = undefined;
+    var nRowIndex       = undefined;
+    var objRow          = undefined;
+    var ReadRows        = undefined;
+    var ProcessedRows   = undefined;
+    var Status          = undefined;
+    var FileName        = undefined;
+    var bReturn         = false;
+    
+    try
+    {
+        BeginLogFolder(arguments);
+    
+        switch(nOpType)
+        {
+            case 0:
+                strOpType   = "Import";
+                break;
+            case 1:
+                strOpType   = "Export";
+                break;
+            default:
+                Log["Error"]("The operation type is error, please check the input.");
+                break;
+        }
+    
+        WaitingForObjectWithTime(Aliases["TDP_toad"]["BaseModalForm"], 5);
+        if(!Aliases["TDP_toad"]["BaseModalForm"]["Exists"])
+        {
+            return bReturn;
+        }
+        lvResults = Aliases["TDP_toad"]["frmBaseModal"]["frmConfirmation"]["pnlFinishedControl"]["pnlControlTop"]["grdResult"];
+        //nRowIndex = lvResults["FindRow"]('Description', '*' + strTableName + '*');
+      	//if(nRowIndex == -1)
+        //{
+        //    Log["Message"]("The result is empty! Please check it.");
+      	//	  nRowIndex = 0;
+        //}
+        nRowIndex     = 0;
+        objRow        = lvResults["FindChild"]('ControlIndex', nRowIndex, 2);
+    
+        ReadRows      = objRow["FindChild"]('Name', '*Read*', 1)["Value"];
+        ProcessedRows = objRow["FindChild"]('Name', '*' + strOpType + 'ed*', 1)["Value"];
+        Status        = objRow["FindChild"]('Name', '*Status*', 1)["Value"];
+        FileName      = objRow["FindChild"]('Name', '*File Name*', 1)["Value"];
+    
+        Log["Message"](strOpType + ' table \"' + strTableName + '\" -- Read Rows: ' + ReadRows 
+            + '; ' + strOpType + 'ed Rows: ' + ProcessedRows + '; Status: ' + Status + '; File Name: ' + FileName + '.');
+    
+        if(ReadRows == ProcessedRows && Status == 'Finished')
+        {
+            bReturn = true;
+            var objPicture = Sys["Desktop"]["Picture"]();
+            Log["Picture"](objPicture, "Screen Image");
+        }
+        else
+        {
+            bReturn = false;
+            var objPicture = Sys["Desktop"]["Picture"]();
+            Log["Picture"](objPicture, "Screen Image");
+        }
+    }
+  	catch(e)
+  	{
+  		  Log["Error"](e["description"]);
+  	}
+  	finally
+  	{
+  		  EndLogFolder();
+  	}
+
+    return bReturn;
+}
+
+//-------------------------------------------------------------------------------------
+//Function Name : GetTICObject
+//Author        : Hugo He
+//Create Date   : July 25, 2013
+//Last Modify   : 
+//Description   : Get an object in TIC (Mainly for verify publish result)
+//Parameter     : strObjName --> Object Name, if it's not under 'No folder assigned',
+//                    the name should be seperated by '/'. e.g. folderName/objectName
+//Return        : TestComplete object
+//-------------------------------------------------------------------------------------
+function GetTICObject(strObjName)
+{
+
+    var scrollBar, pageDown, pageUp;
+    var arrObjName, nArrNameLength;
+    var i;
+    
+    try
+    {
+        BeginLogFolder(arguments);
+        
+        arrObjName = strObjName["split"]('/');
+        nArrNameLength = arrObjName["length"];
+        //If object is under 'No folder assigned' 
+        if(nArrNameLength==1)
+        {
+            arrObjName[1] = arrObjName[0];
+            arrObjName[0] = 'No folder assigned';
+            nArrNameLength += 1;
+        }
+        
+        objTreeList = Aliases["TDP_toad"]["frmMainForm"]["DockPanel"]["ControlContainer"]
+            ["AnalystBrowserControl"]["xtraTabControlAnalystTool"]["xtraTabPageObjectPalette"]
+            ["objectPaletteControl1"]["leftLeftPanel"]["leftList"]["treeList"]["groupingDataPanel"];
+        //If there's no object under the object tree, it's a bug.
+        if (! objTreeList["outlineitemNode0"]["Exists"] || ! objTreeList["outlineitemNode0"]["VisibleOnScreen"])
+        {
+            objTIC = null;
+            throw new Error('Objects in TIC can not show on screan!');
+        }
+        //Wait the first TIC objects show up 
+        objTreeList["outlineitemNode1"]["WaitProperty"]('VisibleOnScreen', true, 10000);
+        
+        scrollBar = Aliases["TDP_toad"]["frmMainForm"]["DockPanel"]["ControlContainer"]
+                            ["AnalystBrowserControl"]["xtraTabControlAnalystTool"]["xtraTabPageObjectPalette"]
+                            ["objectPaletteControl1"]["leftLeftPanel"]["leftList"]["treeList"]["VTLScrollBar"];
+        pageDown = scrollBar["buttonPageDown"];
+        pageUp = scrollBar["buttonPageUp"];
+        //scroll up to the top
+        Aliases["RefreshMappingInfo"]();
+        scrollBar["WaitProperty"]('VisibleOnScreen', true, 3000);
+        if (scrollBar["Exists"] && scrollBar["VisibleOnScreen"])
+        {
+            while (pageUp["Height"] > 0)
+                pageUp["Click"]();
+        }
+
+        //Collapse all folder for verify folder heirarchy
+        objExpanded = (new VBArray(objTreeList["FindAllChildren"]('Expanded', true, 1)))["toArray"]();
+        for(i=0; i<objExpanded["length"]; i++)
+        {
+            objExpanded[i]["Click"]();
+            objExpanded[i]["Expanded"] = false;
+        }
+        
+        //Expand folders to search the object
+        for(i=0; i<nArrNameLength; i++)
+        {
+            objTreeList["RefreshMappingInfo"]();
+            objTemp = objTreeList["FindChild"]('Value', arrObjName[i], 2);
+            objTIC  = objTreeList["FindChild"]('Value', arrObjName[nArrNameLength-1], 2, true);
+            if(objTIC["Exists"])
+            {
+                i=i+1;
+                break;
+            }
+            if(objTemp["Exists"])
+            {
+                objTemp["Parent"]["Click"]();
+                objTemp["Parent"]["Expanded"] = true;
+            }
+            else
+                break;
+        }
+        if(i < nArrNameLength)
+        {
+            Log["Warning"]('The object does not under the folder');
+        }
+    }
+    catch(e)
+    {
+        Log["Error"](e["description"]);
+        throw e;
+    }
+    finally
+    {        return objTIC;
+        EndLogFolder();
+    }
+    return objTIC;
+}
+
+//-------------------------------------------------------------------------------------
+//Function Name : GetDBObject
+//Author        : Hugo He
+//Create Date   : Jan. 6th, 2014
+//Last Modify   : 
+//Description   : Get an object from database
+//Parameter     : strConnName     --> Connection name
+//              : strSchema       --> Schema name
+//              : strObjType      --> Object type, Tables, Views...
+//              : strObjName      --> Object name
+//Return        : TestComplete object or null
+//-------------------------------------------------------------------------------------
+function GetDBObject(strConnName, strSchema, strObjType, strObjName)
+{
+    var objReturn = null;
+    var objConn   = null;
+    var scrollBar, pageDown, pageUp, firstRowObject;
+
+    try 
+    {
+        BeginLogFolder(arguments);
+
+        scrollBar = Aliases["TDP_toad"]["frmMainForm"]["DockPanel"]["ControlContainer"]
+                            ["AnalystBrowserControl"]["xtraTabControlAnalystTool"]["xtraTabPageObjectPalette"]
+                            ["objectPaletteControl1"]["leftLeftPanel"]["leftList"]["treeList"]["VTLScrollBar"];
+        pageDown  = scrollBar["buttonPageDown"];
+        pageUp    = scrollBar["buttonPageUp"];
+        
+        objConn = GetConnection(strConnName);
+        
+        if (objConn["Exists"])
+        {
+            objConn["Click"]();
+            objConn["DblClick"]();
+        }
+        else
+        {
+            throw new Error('Connection "' + strConnName +'" does not exist!');
+        }
+
+        //Select schema
+        Aliases["TDP_toad"]["frmMainForm"]["DockPanel"]["ControlContainer"]["AnalystBrowserControl"]
+            ["xtraTabControlAnalystTool"]["xtraTabPageObjectPalette"]["objectPaletteControl1"]
+            ["schemaListPanel"]["schemaList"]["WaitProperty"]('Visible', true, 10000);
+        Aliases["TDP_toad"]["frmMainForm"]["DockPanel"]["ControlContainer"]["AnalystBrowserControl"]
+            ["xtraTabControlAnalystTool"]["xtraTabPageObjectPalette"]["objectPaletteControl1"]
+            ["schemaListPanel"]["schemaList"]["SetTextCore"](strSchema);
+			  Delay(3000);
+        
+        //Select strObjType tab
+        Aliases["TDP_toad"]["frmMainForm"]["DockPanel"]["ControlContainer"]["AnalystBrowserControl"]
+            ["xtraTabControlAnalystTool"]["xtraTabPageObjectPalette"]["objectPaletteControl1"]
+            ["tabs"]["ClickTab"](strObjType);
+        
+        //Wait the tables/views show up
+        firstRowObject = Aliases["TDP_toad"]["frmMainForm"]["DockPanel"]["ControlContainer"]["AnalystBrowserControl"]
+                            ["xtraTabControlAnalystTool"]["xtraTabPageObjectPalette"]["objectPaletteControl1"]["leftLeftPanel"]
+                            ["leftList"]["treeList"]["UIAObject"]("Data_Panel")["UIAObject"]("Node0")["UIAObject"]("Name_row_0");
+        firstRowObject["WaitProperty"]("VisibleOnScreen", true, 10000);
+        //scroll down to search object
+        if (scrollBar["Exists"] && scrollBar["VisibleOnScreen"])
+        {
+            while (pageUp["Height"] > 0)
+                pageUp["Click"]();
+            do
+            {
+                objReturn = Aliases["TDP_toad"]["frmMainForm"]["DockPanel"]["ControlContainer"]
+                          ["AnalystBrowserControl"]["xtraTabControlAnalystTool"]["xtraTabPageObjectPalette"]
+                          ["objectPaletteControl1"]["leftLeftPanel"]["leftList"]["treeList"]
+                          ["groupingDataPanel"]["FindChild"]('Value', strObjName, 1, true);
+                if (objReturn["Exists"] && objReturn["VisibleOnScreen"])
+                {
+                    break;
+                }
+                if (pageDown["Height"] > 0)
+                {
+                    pageDown["Click"]();
+                    Aliases["RefreshMappingInfo"]();
+                }
+                else
+                {
+                    break;
+                }
+            } while (true);
+        }
+        else
+        {
+            objReturn = Aliases["TDP_toad"]["frmMainForm"]["DockPanel"]["ControlContainer"]
+                    ["AnalystBrowserControl"]["xtraTabControlAnalystTool"]["xtraTabPageObjectPalette"]
+                    ["objectPaletteControl1"]["leftLeftPanel"]["leftList"]["treeList"]["groupingDataPanel"]
+                    ["FindChild"]('Value', strObjName, 1, true);
+        }
+    }
+    catch(e)
+    {
+        Log["Error"](e["description"]);
+
+    }
+    finally
+    {
+        EndLogFolder();
+    }
+    if (objReturn == null || !objReturn["Exists"])
+        objReturn = null;
+    return objReturn;
+}
+
+//-------------------------------------------------------------------------------------
+//Function Name : CompareExcelAfterSort_WithNoPath
+//Author        : Roy T.Burns
+//Description   : An encapsulation for function CompareExcelAfterSort.
+//                And the relative paths is "../TDPAutomation/ToadDataPoint/Config/TestData"
+//Parameter     : strSrcFileName
+//Parameter     : strSrcSheet
+//Parameter     : strDstFileName
+//Parameter     : strDstSheet
+//Parameter     : strColumn -- Column name(order by)
+//Parameter     : bAscend -- true: Ascend; false: Descend.
+//Return        : bResult -- true: same; false: different; -1: error.
+//-------------------------------------------------------------------------------------
+function CompareExcelAfterSort_WithNoPath(strSrcFileName, strSrcSheet, strDstFileName, strDstSheet, strColumn, bAsced)
+{
+    var strSrcFile            = g_strProjectTestData + "\\" + strSrcFileName;//"Import" + "\\" + "ImportExport_DataForImport.xls"
+    var strSrcSheet           = strSrcSheet; //"IMPORT"
+    var strDstFile            = g_strProjectTestData + "\\" + strDstFileName;//"Export" + "\\" + "ImportExport_DataForExport.xls"
+    var strDstSheet           = strDstSheet; //"IMPORT"
+    var strColumn             = strColumn; //"ADDRESS_ID"
+    var bAsced                = bAsced; //true
+    var bResult               = false;
+    
+    try
+    {
+        BeginLogFolder(arguments);
+        
+        Log["Message"](strSrcFile);
+        Log["Message"](strSrcSheet);
+    
+        bResult = CompareExcelAfterSort(strSrcFile, strSrcSheet, strDstFile, strDstSheet, strColumn, bAsced)
+        Log["Message"]("bResult = " + bResult);
+        if(bResult == -1)
+        {
+            Log["Message"]("Some mistake.");
+            var objPicture = Sys["Desktop"]["Picture"]();
+            Log["Picture"](objPicture, "Screen Image");
+        }
+        else if(bResult == false)
+        {
+            Log["Message"]("Different.");
+            var objPicture = Sys["Desktop"]["Picture"]();
+            Log["Picture"](objPicture, "Screen Image");
+        }
+        else
+        {
+            Log["Message"]("Same.");
+        }
+    }
+  	catch(e)
+  	{
+  		  Log["Error"](e["description"]);
+  	}
+  	finally
+  	{
+  		  EndLogFolder();
+  	}
+    return bResult;
+}
+
+
+
+//-------------------------------------------------------------------------------------
+//Function Name : FindTlCObject
+//Author        : Queena Liu
+//Create Date   : March 20 2014
+//Last Modify   : 
+//Description   : Find if the object strName in the strPath is existed in the Treelist Object
+//Parameter     : objTreelist     --> Treelist Object
+//              : strPath         --> folder's Path or directory eg. datapublish/testdata
+//              : strName         --> publish name 
+//                nPattern       --> 0:tabbed(default) 1:treelist 2: Connection Treelist            
+//Return        : object publishobject -> Return the focused object when finded
+//-------------------------------------------------------------------------------------
+function FindTlCObject(objTreelist, strPath, strName, nPattern, strTICName)
+{
+    var arrPath;
+    var strFinal,bConn;
+    var bReturn = false;
+    var bFinal  = false;
+    var publishObject;
+    try
+    {
+        BeginLogFolder(arguments);
+        arrPath = strPath["split"]('/');
+        var objOrg = objTreelist;
+        switch( nPattern)
+        {
+            case 1: 
+                objTreelist = objTreelist["Nodes"]["Item"](0);
+                objTreelist["set_Expanded"](true);
+                break;
+            case 2:
+                //objTreelist = objTreelist["Nodes"]["Item"](0)["Nodes"]["Item"](0);
+                for( var i = 0; i< objTreelist["Nodes"]["Count"]; i++)
+                {
+                
+                    objTreelist = objTreelist["Nodes"]["Item"](i);
+                    objTreelist["set_Expanded"](true);
+                    for( var j = 0; j< objTreelist["Nodes"]["Count"]; j++)
+                    {
+                        var strData = objTreelist["Nodes"]["Item"](j)["Data"];
+                        if( strData == null) continue;
+                        var strConnName = strData["Connection"]["Name"];
+                        if( strConnName == null ) continue;
+                        if( strConnName == strTICName )
+                        { 
+                            bConn = true;
+                            objTreelist=objTreelist["Nodes"]["Item"](j);
+                            objTreelist["set_Expanded"](true);
+                            break;
+                        }
+                        else
+                        {
+                            bConn = false;
+                        }
+
+                    }
+                    //if( bConn == false) objTreelist = objOrg;
+                    if(bConn == true) break;  
+                    else objTreelist = objOrg;
+                }
+                break;
+            default:
+        }
+        for( var i = 0; i < arrPath["length"]; i++ )
+        { 
+            if(i == 0)
+            {
+                strFinal = arrPath[i];
+            }
+            else
+            {
+                strFinal = strFinal + '/' + arrPath[i]  ;
+            }
+            for(var j = 0; j < objTreelist["Nodes"]["Count"] ; j++)
+            {
+                var strNodeName = objTreelist["Nodes"]["Item"](j)["Data"]["FullSubFolder"];
+                strNodeName = aqConvert["VarToStr"](strNodeName);
+                if( strNodeName == strFinal ) 
+                {
+                    bReturn = true;
+                    objTreelist = objTreelist["Nodes"]["Item"](j);  
+                    objTreelist["set_Expanded"](true);
+                    break;
+                }
+                else
+                {
+                    bReturn = false;
+                } 
+            
+            }
+         }
+         if(bReturn)
+         {
+               Log["Checkpoint"]("Find the destination folder " + strPath);
+               for(var j = 0; j < objTreelist["Nodes"]["Count"] ; j++)
+              {
+                  var strObjName = objTreelist["Nodes"]["Item"](j)["Data"]["DisplayName"];
+                  if(strObjName == null) continue;
+                  strObjName = aqConvert["VarToStr"](strObjName);
+                  if( strObjName == strName ) 
+                  {
+                      bFinal = true;
+                      Log["Checkpoint"]("Find the object " + strName + " under the folder "+strPath );
+                      objTreelist = objTreelist["Nodes"]["Item"](j);  
+                     // var nTemp = objOrg["MakeNodeVisible"](objTreelist);
+                      objTreelist["set_Selected"](true); 
+                      //objTreelist["set_Checked"](true);
+                      //objTreelist["set_Expanded"](true);
+                      //objTreelist["Focused"] = true;
+                      objOrg["set_FocusedNode"](objTreelist);
+                      Delay(3000);
+                      var nIndex   = objOrg["focusedRowIndex_2"];
+                      publishObject = GetFinalTICObject(objOrg, nIndex);      
+                      break;
+                  }
+                  else
+                  {
+                      bFinal = false;
+                  } 
+              
+              }
+              if( bFinal == false) 
+              {
+                  Log["Error"]("Didn't find the object "+strObjName);
+              }
+              else 
+              {
+                  Log["Checkpoint"]("Find the object "+strObjName);
+              }
+          
+         }
+         else
+         {
+              Log["Error"]("Didn't find the destination folder " + strPath);
+         }
+    }
+  	catch(e)
+  	{
+  		  Log["Error"](e["description"]);
+  	}
+  	finally
+  	{
+  		  EndLogFolder();
+  	}
+     return publishObject; 
+}
+
+//-------------------------------------------------------------------------------------
+//Function Name : FindTreeListObject
+//Author        : Queena Liu
+//Create Date   : March 20 2014
+//Last Modify   : 
+//Description   : Find the object  in the Treelist Object
+//Parameter     : objTreelist     --> Treelist Object                
+//Return        : object objReturn 
+//-------------------------------------------------------------------------------------
+function FindTreeListObject( objTreelist, strObjName)
+{
+    try
+    {
+        BeginLogFolder(arguments);
+        
+        var scrollBar, pageDown, pageUp
+        scrollBar = objTreelist["VTLScrollBar"];
+        objTreelist = objTreelist["groupingDataPanel"];
+        pageDown  = scrollBar["buttonPageDown"];
+        pageUp    = scrollBar["buttonPageUp"];
+        if (scrollBar["Exists"] && scrollBar["VisibleOnScreen"])
+        {
+              while (pageUp["Height"] > 0)
+                  pageUp["Click"]();
+              do
+              {
+                  objReturn = objTreelist["FindChild"]('Value', strObjName, 2, true);
+                  if (objReturn["Exists"] && objReturn["VisibleOnScreen"])
+                  {
+                      Log["Message"]("Find the Object " + strObjName);
+                      break;
+                  }
+                  if (pageDown["Height"] > 0)
+                  {
+                      pageDown["Click"]();
+                      Aliases["RefreshMappingInfo"]();
+                  }
+                  else
+                  {
+                      break;
+                  }
+              } while (true);
+          }
+          else
+          {
+              objReturn = objTreelist["FindChild"]('Value', strObjName, 2, true);
+          }
+         
+    }   
+    catch(e)
+  	{
+  		  Log["Error"](e["description"]);
+  	}
+  	finally
+  	{
+        return objReturn;
+  		  EndLogFolder();
+  	}
+      
+}
+
+//-------------------------------------------------------------------------------------
+//Function Name : CloseAllQueryBuilder
+//Author        : Queena Liu
+//Create Date   : March 26 2014
+//Last Modify   : 
+//Description   : Close the Query Builder window
+//Parameter     :               
+//Return        : null
+//-------------------------------------------------------------------------------------
+function CloseAllQueryBuilder()
+{
+    try
+    {
+        BeginLogFolder(arguments);
+        var objMain = Aliases["TDP_toad"]["frmMainForm"]["MdiClient"];
+        do
+        {
+            var objQuery = objMain["FindChild"]("Caption","Query Builder*");
+        
+            if( objQuery["Exists"] )
+            {
+                objQuery["Close"]();
+                var objCfm = Aliases["TDP_toad"]["frmBaseModal"]["frmConfirmation"];
+                if(objCfm["Exists"] && objCfm["VisibleOnScreen"])
+                {
+                      objCfm["pnlButton"]["btnNo"]["Click"]();
+                }
+            }
+            else
+            {
+                break;
+            }
+        }while(true);
+    }
+    catch(e)
+  	{
+  		  Log["Error"](e["description"]);
+  	}
+  	finally
+  	{
+  		  EndLogFolder();
+  	}
+    
+}
+
+
+//-------------------------------------------------------------------------------------
+//Function Name : CloseAllEditor
+//Author        : Queena Liu
+//Create Date   : March 26 2014
+//Last Modify   : 
+//Description   : Close the Editor window
+//Parameter     :               
+//Return        : null
+//-------------------------------------------------------------------------------------
+function CloseAllEditor()
+{
+    try
+    {
+        BeginLogFolder(arguments);
+        var objMain = Aliases["TDP_toad"]["frmMainForm"]["MdiClient"];
+        do
+        {
+            var objQuery = objMain["FindChild"]("Caption","Editor*");
+        
+            if( objQuery["Exists"] )
+            {
+                objQuery["Close"]();
+                var objCfm = Aliases["TDP_toad"]["frmBaseModal"]["frmConfirmation"];
+                if(objCfm["Exists"] && objCfm["VisibleOnScreen"])
+                {
+                      objCfm["pnlButton"]["btnNo"]["Click"]();
+                }
+            }
+            else
+            {
+                break;
+            }
+        }while(true);
+    }
+    catch(e)
+  	{
+  		  Log["Error"](e["description"]);
+  	}
+  	finally
+  	{
+  		  EndLogFolder();
+  	}
+}
+
+
+//-------------------------------------------------------------------------------------
+//Function Name : GetFinalTICObject
+//Author        : Queena Liu
+//Create Date   : March 20 2014
+//Last Modify   : 
+//Description   : Get the focused node of the treelist object
+//Parameter     : objTreelist     --> Treelist Object  
+//                nIndex          --> The index of focused node          
+//Return        : Object objToObj
+//-------------------------------------------------------------------------------------
+function GetFinalTICObject(objTreelist, nIndex) 
+{
+    //["UIAObject"]("Data_Panel")["UIAObject"]("Node11")["UIAObject"]("Name_row_11")
+    var objToObj = objTreelist["UIAObject"]("Data_Panel")["UIAObject"]("Node"+nIndex)["UIAObject"]("Name_row_" + nIndex);
+    Delay(5000);
+    return objToObj;
+}
+
+
+//-------------------------------------------------------------------------------------
+//Function Name : FindDBObject
+//Author        : Queena Liu
+//Create Date   : March 27, 2014
+//Last Modify   : 
+//Description   : Get a DB object
+//Parameter     : strConnName     --> Connection name
+//              : strSchema       --> Schema name
+//              : strObjType      --> Object type, Tables, Views...
+//              : strObjName      --> Object name
+//Return        : object or null
+//-------------------------------------------------------------------------------------
+function FindDBObject(strConnName, strSchema, strObjType, strObjName)
+{
+    try
+    {
+        BeginLogFolder(arguments);
+        
+        var bReturn = false;
+        var objConn = GetConnection(strConnName);     
+        if (objConn["Exists"])
+        {
+            objConn["Click"]();
+            objConn["DblClick"]();
+        }
+        else
+        {
+            throw new Error('Connection "' + strConnName +'" does not exist!');
+        }
+        var objPltCtrl = Aliases["TDP_toad"]["frmMainForm"]["DockPanel"]["ControlContainer"]["AnalystBrowserControl"]
+                          ["xtraTabControlAnalystTool"]["xtraTabPageObjectPalette"]["objectPaletteControl1"];
+        var objSchema = objPltCtrl["schemaListPanel"]["schemaList"];
+        var objTabs = objPltCtrl["tabs"];
+        objSchema["SetValue"](strSchema);
+        Delay(3000);
+        objTabs["ClickTab"](strObjType);
+        objTreelist = objPltCtrl["leftLeftPanel"]["leftList"]["treeList"];
+        for( var i=0; i< objTreelist["Nodes"]["Count"]; i++)
+        {
+              var strName = objTreelist["Nodes"]["Item"](i)["Data"];
+              if(strName == null) continue;
+              strName = strName["DisplayName"];
+              if(strName == strObjName) 
+              { 
+                    bReturn = true;
+                    objTreelist["set_FocusedNode"](objTreelist["Nodes"]["Item"](i));
+                    Delay(3000);
+                    var nIndex   = objTreelist["focusedRowIndex_2"];
+                    publishObject = GetFinalTICObject(objTreelist, nIndex); 
+                    break;
+              }        
+        }
+        if( bReturn = false)
+        {
+            throw new Error("Didn't find the object "+strObjName + ",please check.");
+        }
+        else
+        {
+            Log["Message"]("Find the object " + strObjName);
+        }
+    }
+    catch(e)
+  	{
+  		  Log["Error"](e["description"]);
+  	}
+  	finally
+  	{
+  		  EndLogFolder();
+  	}
+    return publishObject;   
+}

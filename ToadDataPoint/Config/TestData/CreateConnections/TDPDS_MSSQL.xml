@@ -1,0 +1,26 @@
+<ToadStudio>
+  <FileVersion Encryption="3Des">3</FileVersion>
+  <ConnectionHierarchy>
+    <DbPlatform name="SQL Server">
+      <Path />
+      <Connections>
+        <Connection type="SqlServer" autoCommit="True">
+          <Name>TDPDS_MSSQL</Name>
+          <Path>SQL Server</Path>
+          <AutoConnect>False</AutoConnect>
+          <Database>TDP_AUTO</Database>
+          <Host>10.30.155.30,1500</Host>
+          <User>sa</User>
+          <Password>3D8C36B0BE649B3A4D25F3C6ED6DB18E</Password>
+          <WinAuth>False</WinAuth>
+          <LastConnectionDate>2013-12-19T06:26:48.7812500</LastConnectionDate>
+          <EncryptConnection>False</EncryptConnection>
+          <NetworkPacketSize>4096</NetworkPacketSize>
+          <NetworkProtocol>Default</NetworkProtocol>
+          <SqlServerEntry Key="Application Name" Value="Toad Data Point" />
+        </Connection>
+      </Connections>
+      <Groups />
+    </DbPlatform>
+  </ConnectionHierarchy>
+</ToadStudio>

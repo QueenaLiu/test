@@ -1,0 +1,27 @@
+﻿///////////////////////////////////////////////////////////////////////////////////////
+//
+//  Unit Name     : Variable
+//  Author        : Roy T.Burns(Royburns.Peng@software.dell.com)
+//  Create Date   : July 25, 2013
+//  Last Modify   : 
+//  Description   : Variables, for the project configuration.
+//
+//    All rights reserved by TDP Team.
+//
+///////////////////////////////////////////////////////////////////////////////////////
+
+//
+var SITE_CODE, HostName, IP;
+var ConfigFile;
+var Branch; // master? branch?
+var BuildType; // daily build, release
+//var TDPInstallerPattern = /^TDPSmokeTest_[0-9]*\.[0-9]*\.[0-9]*\.[0-9]*\.msi/g; //maybe this will be instead by parameters of Jenkins URL
+var TDPInstallerPattern = /^ToadDataPoint_pro_[0-9]*\.[0-9]*\.[0-9]*\.[0-9]*\.exe/g; //maybe this will be instead by parameters of Jenkins URL
+var TDPAppName = "toad.exe";
+var TDPProcessName = "toad"
+
+var g_strProjectSuite       = ProjectSuite["Path"];
+var g_strProject            = Project["Path"];
+var g_strProjectConfig      = Project["Path"] + "\Config";
+var g_strProjectTestConfig  = Project["Path"] + "\Config\\TestConfig";
+var g_strProjectTestData    = Project["Path"] + "\Config\\TestData";

@@ -1,0 +1,129 @@
+﻿///////////////////////////////////////////////////////////////////////////////////////
+//
+//  Unit Name     : ImportConnection
+//  Author        : Roy T.Burns(Royburns.Peng@software.dell.com)
+//  Create Date   : Oct 10, 2013
+//  Last Modify   : 
+//  Description   : Test Step -- Import Connections.
+//
+//    All rights reserved by TDP Team.
+//
+///////////////////////////////////////////////////////////////////////////////////////
+
+//USEUNIT Variable
+//USEUNIT InitialEnv
+//USEUNIT TDPCommon
+//USEUNIT Common
+//USEUNIT ExcelOperator
+
+// variable
+var s_strFunctionPoint  = 'CreateConnections';
+var s_strTestConfig     = 'CreateConnections.xls'
+
+//-------------------------------------------------------------------------------------
+//Function Name : ImportConnection
+//Author        : Hugo He
+//Create Date   : July 25, 2013
+//Last Modify   : 
+//Description   : Import Connection from exist file
+//Parameter     : nID in Excel
+//Return        : Boolean
+//-------------------------------------------------------------------------------------
+function ImportConnection(nID)
+{
+    var strConfigFile       = g_strProjectTestConfig + "\\" + s_strFunctionPoint + "\\" + s_strTestConfig;
+    var strSheetName        = "ImportConnection";
+    //Controls
+    var importBtn, connItem, okBtn, conn;
+    //Excel data
+    var connFileDir, connFileName, connName;
+    //Other variant
+    var objDict;
+    var parentWidth, connItemWidth, connItemHeight, connItemTop;
+    var arrConnNames;
+    var bReturn = true;
+    
+    try
+    {
+        BeginLogFolder(arguments);
+        
+        objDict = new ActiveXObject("Scripting.Dictionary");
+        InitialEnvMain();
+        ActivateMainWinForm();
+        Delay(1000);
+    
+        //Get configuration from Excel
+        if (GetDataFromExcelByID(strConfigFile, strSheetName, nID, objDict))
+        {
+            connFileDir   = objDict["Item"]("connFileDir");
+            connFileName  = objDict["Item"]("connFileName");
+            connName      = objDict["Item"]("connName");
+        }
+        arrConnNames = connName["split"]('|');
+
+        //click import button
+        importBtn = Aliases["TDP_toad"]["frmMainForm"]["DockPanel"]["ControlContainer"]
+                        ["AnalystBrowserControl"]["connectionManagerControl1"]["connectionControl1"]
+                        ["BarDockControl"]["DockedBarControl"]["btnImport"];
+        importBtn["Click"]();
+
+        //Select connection file
+        Aliases["TDP_toad"]["dlgImportConnections"]["pnlFileName"]["cbxFileName"]
+            ["SetText"](ProjectSuite["Path"]+connFileDir+connFileName);
+        Aliases["TDP_toad"]["dlgImportConnections"]["btnOpen"]["Click"]();
+        //Select the connection in connection list window   
+        for (i in arrConnNames){
+            connItem = Aliases["TDP_toad"]["frmImportConnection"]["tlsConnection"]
+                          ["pnlGroupingData"]["FindChild"]('Value', arrConnNames[i], 2);
+            if(connItem["Exists"]){
+                Log["Message"]('Find the connection: '+arrConnNames[i]);
+                parentWidth = connItem["Parent"]["Width"];
+                connItemWidth = connItem["Width"];
+                connItemHeight = connItem["Height"];
+                connItemTop = connItem["Top"];
+            
+                connItem["Parent"]["Click"]((parentWidth-connItemWidth)*5/8, connItemHeight/2);
+            }
+            else{
+                throw new Error('Cannot find connection: '+arrConnNames[i]);
+            }
+        }
+        okBtn = Aliases["TDP_toad"]["frmImportConnection"]["btnPanelControl"]["btnOk"]
+        if (okBtn["Enabled"]){
+            okBtn["Click"]();
+        }
+        else{
+            throw new Error('Import button is disabled');
+        }
+    
+        //Check and enable connection
+        for (i in arrConnNames){
+            conn = GetConnection(arrConnNames[i]);
+            if (! conn["Exists"]){
+                throw new Error('Connection "'+arrConnNames[i]+'" does not exist!');
+            }
+            else{
+                Log["Message"]('Import connection "'+arrConnNames[i]+'" success!');
+                conn["DblClick"]();
+            }
+            Delay(5000);
+        }
+        if (bReturn){
+            Log["Message"]('Import connection success.');
+        }
+        else{
+            throw new Error('Import connection failed.')
+        }
+    }
+    catch(e)
+    {
+        bReturn = false;
+        Log["Error"](e["description"]);
+        throw e;
+    }
+    finally
+    {
+        EndLogFolder();
+    }
+    return bReturn;
+}

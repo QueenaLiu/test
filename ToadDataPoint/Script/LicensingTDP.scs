@@ -1,0 +1,99 @@
+﻿///////////////////////////////////////////////////////////////////////////////////////
+//
+//  Unit Name     : LicensingTDP
+//  Author        : Roy T.Burns(Royburns.Peng@software.dell.com)
+//  Create Date   : Nov 18, 2013
+//  Last Modify   : 
+//  Description   : Test Step -- Licensing the TDP.
+//
+//    All rights reserved by TDP Team.
+//
+///////////////////////////////////////////////////////////////////////////////////////
+
+//USEUNIT Common
+//USEUNIT TDPCommon
+//USEUNIT Variable
+//USEUNIT InitialEnv
+
+//-------------------------------------------------------------------------------------
+//Function Name: LicensingTDP
+//Author: Hugo.He
+//Parameters: null
+//Description: License TDP after installation
+//Return: boolean
+//-------------------------------------------------------------------------------------
+function LicensingTDP()
+{
+    var   License, SiteMessage;
+    var   ToadLicenseForm, KeyEditBox, SiteMessageEditBox, ContinueBtn;
+    var   IntX, IntY;
+    var   bReturn = true;
+    
+
+    try
+    {
+        BeginLogFolder(arguments);
+    
+        //Aliases["TDP_toad"]["frmLicenseForm"]["WaitProperty"]('Exists', true, 10 * 1000);
+        WaitingForObjectWithTime(Aliases["TDP_toad"]["frmLicenseForm"], 10);
+        if (!Aliases["TDP_toad"]["frmLicenseForm"]["Exists"])
+        {
+            Log["Message"]('License had been registered into TDP.');
+        }
+
+        else
+        {
+            License = Project["Variables"]["LicenseKey"];
+            SiteMessage = Project["Variables"]["SiteMessage"];
+            ToadLicenseForm = Aliases["TDP_toad"]["frmLicenseForm"];
+            IntX = ToadLicenseForm["treeListLicense"]["Width"];
+            IntY = ToadLicenseForm["treeListLicense"]["Height"];
+            ToadLicenseForm["treeListLicense"]["Click"](IntX/2,IntY/4);
+            Delay(1000);
+            ToadLicenseForm["treeListLicense"]["RefreshMappingInfo"]();
+            ToadLicenseForm["treeListLicense"]["Refresh"]();
+            KeyEditBox = ToadLicenseForm["treeListLicense"]["FindChild"]('ClrClassName', 'TextBoxMaskBox', 2);
+            KeyEditBox["Keys"](License);
+            Log["Message"]('Enter license: ' + License);
+        
+            ToadLicenseForm["treeListLicense"]["Click"](IntX/2,IntY * 3/4);
+            Delay(1000);
+            SiteMessageEditBox = ToadLicenseForm["treeListLicense"]["FindChild"]('ClrClassName', 'TextBoxMaskBox', 2);
+            ToadLicenseForm["treeListLicense"]["RefreshMappingInfo"]();
+            SiteMessageEditBox["Keys"](SiteMessage);
+            Log["Message"]('Enter the Site Message: ' + SiteMessage);
+        
+            ContinueBtn = ToadLicenseForm["btnContinue"];
+            if (! ContinueBtn["Enabled"])
+            {
+                Delay(10000);
+            }
+            if (ContinueBtn["Enabled"])
+            {
+                ContinueBtn["Click"]();
+                Log["Message"]('Click "continue" button!');
+                bReturn = true;
+            }
+            else
+            {
+                throw new Error('The "Continue" button is disabled!');
+            }
+        }
+
+    
+        if(Aliases["TDP_toad"]["dlgTrailKey"]["Exists"])
+        {
+            Aliases["TDP_toad"]["dlgTrailKey"]["btnNo"]["ClickButton"]();
+        }
+    }
+  	catch(e)
+  	{
+        bReturn = false;
+  		  Log["Error"](e["description"]);
+  	}
+  	finally
+  	{
+  		  EndLogFolder();
+  	}
+    return bReturn;
+}

@@ -1,0 +1,164 @@
+﻿//USEUNIT InitialEnv
+//USEUNIT ExcelOperator
+//USEUNIT Variable
+//USEUNIT Common
+//USEUNIT TDPCommon
+//USEUNIT DataCompare
+//USEUNIT Export
+//USEUNIT SQLEditor
+
+var s_strFunctionPoint  = 'Export';
+var s_strTestConfig     = 'Export.xls'
+
+//-------------------------------------------------------------------------------------
+//Function Name : ExportSQLScript
+//Author        : Hugo He
+//Create Date   : Nov 25th, 2013
+//Last Modify   : 
+//Description   : Main Function, test export SQL script
+//Parameter     : nID   ->  ID in Excel
+//Return        : boolean
+//-------------------------------------------------------------------------------------
+function ExportSQLScript(nID)
+{
+    //Inital Env
+    
+    var strConfigFile       = g_strProjectTestConfig + "\\" + s_strFunctionPoint + "\\" + s_strTestConfig;
+    var strSheetName        = "ExportSQLScript"
+    var objDict             = new ActiveXObject("Scripting.Dictionary");
+    var bCompare            = true;
+    var bReturn             = true;
+    var bNeedDropTable      = false;
+    var strCreateTableSQL   = '';
+    var strFileContent      = '';
+    //Excel data variant
+    var nDataCompareID;
+    var strConnName, strSourceType, strDatabaseName, strSourceObjName;
+    var strSchema, strObjectType, strExportFileName, strSybaseASEObjName;
+
+    //Get configuration from Excel
+    try
+    {
+        BeginLogFolder(arguments);
+        
+        InitialEnvMain();
+        ActivateMainWinForm();
+        Delay(1000);
+        
+        //Get Export test data from Excel
+        if (GetDataFromExcelByID(strConfigFile, strSheetName, nID, objDict))
+        {
+            strConnName       = objDict["Item"]("ConnName");
+            strSourceType     = objDict["Item"]("SourceType");
+            strDatabaseName   = objDict["Item"]("DatabaseName");
+            strSchema         = objDict["Item"]("Schema");
+            strObjectType     = objDict["Item"]("ObjectType");
+            strSourceObjName  = objDict["Item"]("ObjectName");
+            strExportFileName = objDict["Item"]("FileName");
+            nDataCompareID    = objDict["Item"]("DataCompareID");
+        }
+        else
+        {
+            throw new Error('Get data from Export excel failed.');
+        }
+        
+        //Export
+        if (Export["Export"](nID, strSheetName, 'Menubar'))
+        {
+            Log["Checkpoint"]('Exporting data success');
+        }
+        else
+        {
+            throw new Error('Exporting data failed');
+        }
+        Delay(3000);
+        
+        //Foucs on source object
+        //Create new table
+        if(strSourceType == 'SybaseASE')
+        {
+            strSybaseASEObjName = strSourceObjName;
+            strSourceObjName = strSourceObjName["split"]('.')[1];
+        }
+        
+        objSoureObj = GetDBObject(strConnName, strSchema, strObjectType, strSourceObjName);
+        objSoureObj["Click"]();
+        switch (aqString["ToUpper"](strSourceType))
+        {
+            case 'ORACLE':
+                strCreateTableSQL = 'CREATE TABLE "' + strSourceObjName + '_NEW" AS SELECT * FROM ' + strSourceObjName + ' WHERE 1 = 2;\n';
+                break;
+            case 'SQLSERVER':
+                strCreateTableSQL = 'SELECT TOP 0 * INTO ' + strSourceObjName + '_NEW FROM ' + strSourceObjName;
+                break;
+            case 'SYBASEASE':
+                strCreateTableSQL = 'SELECT * INTO ' + strSchema + '.' + strSybaseASEObjName + '_NEW FROM ' + strSchema + 
+                                '.' + strSybaseASEObjName + ' WHERE 1 = 2';
+                break;
+            default:
+                throw new Error('Does not support "' + strSourceType + '" data source.');
+        }
+        
+        Log["Message"](strCreateTableSQL);
+        if(! SQLEditor["RunSQLByIDorSQL"](strCreateTableSQL))
+            throw new Error('Create table failed.');
+        else
+            bNeedDropTable = true;
+        
+        //Run exported SQL
+        strFileContent = aqFile["ReadWholeTextFile"](strExportFileName, aqFile["ctUTF8"]);
+        switch (aqString["ToUpper"](strSourceType))
+        {
+            case 'ORACLE':
+                strFileContent = strFileContent+'\n'+'Commit;'
+                break;
+            case 'SQLSERVER':
+                //do nothing
+                break;
+            case 'SYBASEASE':
+                break;
+            default:
+                throw new Error('Does not support "' + strSourceType + '" data source.');
+        }
+        if(! SQLEditor["RunSQLByIDorSQL"](strFileContent))
+            throw new Error('Run SQL failed.');
+        Delay(10000);
+
+        //Compare export result with source table
+        bCompare = DataCompare["DataCompare"](nDataCompareID);
+        
+        if (bCompare == true)
+            Log["Checkpoint"]('Data match!');
+        else
+            throw new Error('Data mismaching!');
+    }
+    catch(e)
+    {
+        bReturn = false;
+        Log["Error"](e["description"]);
+    }
+    finally
+    {
+        //Drop table
+        if(bNeedDropTable == true)
+            if(strSourceType == 'SybaseASE')
+            {
+                SQLEditor["RunSQLByIDorSQL"]('DROP TABLE ' + strSchema + '.' + strSybaseASEObjName + '_NEW');
+            }
+            else
+            {
+                SQLEditor["RunSQLByIDorSQL"]('DROP TABLE ' + strSourceObjName+'_NEW;');
+            }
+        EndLogFolder();
+    }
+    return bReturn;
+}
+
+// Main function for test.
+//* This function is only for DEBUG. DO NOT set it in the test group!!!
+function Main()
+{
+    var nID     = 2;
+    ExportSQLScript(nID);
+}
+//*/

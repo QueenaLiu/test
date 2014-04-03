@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE Nodes [
+
+<!ENTITY % NameValue "CDATA">
+<!ENTITY % PropType "(I|S|D|L|H|B)">
+<!ENTITY % VersionValue "CDATA">
+
+<!ELEMENT Prp (#PCDATA)>
+<!ELEMENT Node (Node|Prp)*>
+<!ELEMENT Nodes (Node)+>
+
+<!ATTLIST Nodes version CDATA "1">
+
+<!ATTLIST Node name CDATA #REQUIRED>
+
+<!ATTLIST Prp name CDATA #REQUIRED>
+<!ATTLIST Prp type CDATA #REQUIRED>
+<!ATTLIST Prp value CDATA #REQUIRED>
+]>
+<Nodes version="1">
+	<Node name="root">
+		<Node name="data">
+			<Node name="logs">
+				<Prp name="key" type="S" value="{D4933018-E450-408B-9251-E8858D280D6A}"/>
+				<Prp name="relpath" type="S" value="Log"/>
+			</Node>
+			<Node name="variables">
+				<Node name="datav3">
+					<Node name="var0">
+						<Prp name="name" type="S" value="GlobalVariables"/>
+					</Node>
+					<Node name="var1">
+						<Prp name="name" type="S" value="SiteCodeConfig"/>
+					</Node>
+					<Node name="var2">
+						<Prp name="name" type="S" value="objTICData"/>
+					</Node>
+					<Node name="var3">
+						<Prp name="name" type="S" value="objORAData"/>
+					</Node>
+					<Node name="var4">
+						<Node name="value">
+							<Prp name="strvalue" type="H" value="440065006C006C0020003C002E0040002600220027003E0020002D002000700072006F0064005C006800680065003100"/>
+						</Node>
+						<Prp name="name" type="S" value="SiteMessage"/>
+					</Node>
+					<Node name="var5">
+						<Node name="value">
+							<Prp name="strvalue" type="H" value="4200450042005900520035004C0057005300420041004300320037003200450052004B005100460035003600570052004C00450059004C004A00530043003100460057002D003100320033002D003400350036002D003700380039002D0042003000"/>
+						</Node>
+						<Prp name="name" type="S" value="LicenseKey"/>
+					</Node>
+				</Node>
+				<Prp name="version" type="I" value="3"/>
+			</Node>
+		</Node>
+		<Prp name="signature" type="S" value="{49FC0C30-9EF7-4DBD-97A8-B7A00E79A2AF}"/>
+	</Node>
+</Nodes>

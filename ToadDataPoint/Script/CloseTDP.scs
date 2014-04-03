@@ -1,0 +1,70 @@
+﻿///////////////////////////////////////////////////////////////////////////////////////
+//
+//  Unit Name     : CloseTDP
+//  Author        : Roy T.Burns(Royburns.Peng@software.dell.com)
+//  Create Date   : July 25, 2013
+//  Last Modify   : 
+//  Description   : Test Step -- Close the TDP, clean up before closeing.
+//
+//    All rights reserved by TDP Team.
+//
+///////////////////////////////////////////////////////////////////////////////////////
+
+//USEUNIT Common
+//USEUNIT TDPCommon
+//USEUNIT Variable
+//USEUNIT InitialEnv
+//USEUNIT TestSteps
+
+//-------------------------------------------------------------------------------------
+//Function Name : CloseTDP
+//Author        : Roy T.Burns
+//Create Date   : July 25, 2013
+//Last Modify   : 
+//Description   : Main function of the current test case.
+//Parameter     : null
+//Return        : null
+//-------------------------------------------------------------------------------------
+function CloseTDP()
+{
+    //CR already committed, it could be removed after CR is fixed
+    try
+    {
+        Delay(30000);
+        if (Aliases["TDP_toad"]["dlgTrailKey"]["Exists"])
+        {
+            TDP_SkipTrialKey();
+        }
+    
+        if (! Aliases["TDP_toad"]["frmMainForm"]["Exists"]){
+            Aliases["WaitAliasChild"]('TDP_toad', 30000);
+            Aliases["TDP_toad"]["WaitAliasChild"]('frmMainForm', 30000);
+        }
+    
+        if (Aliases["TDP_toad"]["frmMainForm"]["Exists"]){
+            Aliases["TDP_toad"]["frmMainForm"]["Close"]();
+            Log["Message"]('Closing TDP!')
+        }
+        else{
+            Log["Error"]('TDP does not exist! Closing TDP failed!');
+            return;
+        }   
+    
+        Delay(5000);
+        if (Aliases["TDP_toad"]["Exists"]){
+            Log["Error"]('TDP process shutdown failed!');
+            return;
+        }
+        else{
+            Log["Message"]('TDP shutdown success!');
+        }
+    }
+    catch(e)
+  	{
+  		  Log["Error"](e["description"]);
+  	}
+  	finally
+  	{
+  		  EndLogFolder();
+  	}
+}

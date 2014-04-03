@@ -1,0 +1,398 @@
+﻿//USEUNIT TDPCommon
+//USEUNIT RegisterNewTICUser
+
+function testa(){
+    test();
+
+}
+
+function TDP_LanuchTDPInstaller(LocalPath){
+var TDPInstallerProcess, LocalPath;
+var i;
+
+    Log["Message"]('Build directory : '+LocalPath);
+    if (aqFileSystem["Exists"](LocalPath)){
+        Log["Message"]('Get build file : '+ aqFileSystem["getFileName"](LocalPath));
+
+        Sys["OleObject"]('WScript.Shell')["Run"]('"' + LocalPath + '"');
+        //Win32API.WinExec(LocalPath+aqFileSystem.getFileName(buildPath), SW_SHOW);  //why it does word?
+        Log["Message"]('Begin install TDP!');
+        for (i=1; i<600; i++){
+            if (Aliases["TDPSetup"]["Exists"])
+                break;
+            Delay(500);
+        } 
+              
+        TDPInstallerProcess = Aliases["TDPSetup"];
+        if (TDPInstallerProcess["Exists"]){
+            Log["Message"]('TDP installer process exists!');
+        }
+        else{
+            Log["Error"]('Lanuch TDP installer timeout! Failed!');
+            return;
+        }
+            
+        Sys["Refresh"]();
+        Aliases["RefreshMappingInfo"]();
+        for (i=1; i<120; i++){
+            if (Aliases["TDPSetup"]["mdTDPSetup"]["Exists"])
+                break;
+            Delay(1000);
+        }            
+        if (Aliases["TDPSetup"]["mdTDPSetup"]["Exists"]){
+            Log["Message"]('Installation frame window exists! Lanuch TDP installer success!');
+        }
+        else{
+           Log["Error"]('Installer frame window does not exist! Lanuch TDP installer fail!');
+           return; 
+        }
+    }
+    else{
+        Log["Error"]('Build does not exist!');
+        return;
+    }
+}
+
+function TDP_ClickNextButton(){
+var TDPInstallerProcess, MainFrame, NextBtn;
+var i;
+
+    Delay(10000);
+    Sys["Refresh"]();
+    Aliases["RefreshMappingInfo"]();
+    MainFrame = Aliases["TDPSetup"]["mdTDPSetup"];
+    
+    if (! MainFrame["Exists"]){
+        Aliases["WaitAliasChild"]('TDPSetup', 5000);
+        Aliases["TDPSetup"]["WaitAliasChild"]('mdTDPSetup', 5000);
+    }
+    if (! MainFrame["Exists"]){
+        Log["Error"]('TDP installer main frame does not exist!');
+        return
+    }
+    MainFrame = Aliases["TDPSetup"]["mdTDPSetup"];
+
+  	for (i=1; i<60; i++){
+      NextBtn = MainFrame["FindChild"]('WndCaption', '&Next >');
+  		if (MainFrame["FindChild"]('WndCaption', '&Next >')["Exists"])
+  			break;
+  		Delay(1000);
+  	}
+    
+    if (NextBtn["Exists"]){
+        if (NextBtn["Enabled"]){
+            if (NextBtn["Visible"]){
+                NextBtn["ClickButton"]();
+                Log["Message"]('Click the "next" button!');
+            }
+            else {
+                Log["Error"]('The "next" button is invisible!');
+                return;
+            }
+        }
+        else{
+            Log["Error"]('The "next" button is disabled!');
+            return;
+        }
+    }
+    else{
+        Log["Error"]('The "Next" button does not exits!');
+        return;
+    }
+}
+
+function TDP_ClickFinishButton(){
+var TDPInstallerProcess, MainFrame, FinishBtn;
+    
+    Delay(10000);
+    Sys["Refresh"]();
+    Aliases["RefreshMappingInfo"]();
+    MainFrame = Aliases["TDPSetup"]["mdTDPSetup"];
+    
+    if (! MainFrame["Exists"]){
+        Aliases["WaitAliasChild"]('TDPSetup', 5000);
+        Aliases["TDPSetup"]["WaitAliasChild"]('mdTDPSetup', 5000);
+    }
+    if (! MainFrame["Exists"]){
+        Log["Error"]('TDP installer main frame does not exist!');
+        return
+    }
+    MainFrame = Aliases["TDPSetup"]["mdTDPSetup"];
+        
+  	for (i=1; i<60; i++){
+      FinishBtn = MainFrame["FindChild"]('WndCaption', '&Finish');
+  		if (FinishBtn["Exists"])
+  			break;
+  		Delay(1000);
+  	}
+	
+    if (FinishBtn["Exists"]){
+        if (FinishBtn["Enabled"]){
+            if (FinishBtn["Visible"]){
+                FinishBtn["ClickButton"]();
+                Log["Message"]('Click the "Finish" button!');
+            }
+            else{
+                Log["Error"]('The "Finish" button is invisible!');
+                return;                
+            }
+        }
+        else{
+            Log["Error"]('The "Finish" button is disabled!');
+            return;
+        }
+    }
+    else{
+        Log["Error"]('The "Finish" button does not exits!');
+    }
+}
+
+function TDP_LicenseAgreementSelect(aSelectionStr){
+var TDPInstallerProcess, MainFrame, ButtonGroup, AcceptBtn, DonotAcceptBtn;
+
+    Sys["Refresh"]();
+    Aliases["TDPSetup"]["mdTDPSetup"]["WaitChild"]('["Window"]("Button", "", 1)', 30000);
+    Aliases["RefreshMappingInfo"]();
+    AcceptBtn = Aliases["TDPSetup"]["mdTDPSetup"]["btnAggreementSelectGroup"]["btnAccept"];
+    DonotAcceptBtn = Aliases["TDPSetup"]["mdTDPSetup"]["btnAggreementSelectGroup"]["btnDoNotAccept"];
+    
+    switch (aSelectionStr){
+    case 'Accept' :
+        if (AcceptBtn["Exists"]){
+            AcceptBtn["ClickButton"]();
+            Log["Message"]('Click "Accept" button!');
+            if (AcceptBtn.wChecked == true){
+                Log["Message"]('Select "Accept" button success!');
+            }
+            else{
+                Log["Error"]('Select "Accept" button failed!');
+                return;
+            }
+        }
+        else{
+            Log["Error"]('"Accept" button does not exist!');
+            return;
+        }
+        break;
+    case 'DonotAccept' : 
+        if (DonotAcceptBtn["Exists"]){
+            DonotAcceptBtn["ClickButton"]();
+            Log["Message"]('Click "DonotAccept" button!');
+            if (DonotAcceptBtn.wChecked == true){
+                Log["Message"]('Select "DonotAccept" button success!');
+            }
+            else{
+                Log["Error"]('Select "DonotAccept" button failed!');
+                return;
+            }
+        }
+        else{
+            Log["Error"]('"DonotAccept" button does not exist!');
+            return;
+        }
+        break;
+    default :
+        Log["Error"]('Argument : '+aSelectionStr+' is not acceptalbe!');
+        return;
+    }
+}
+
+function TDP_LaunchTDP(aVersionStr){
+var TDPInstallPath;
+var i;
+
+    if (Sys["OSInfo"]["Windows64bit"]){
+        TDPInstallPath = 'C:\\Program Files (x86)\\Quest Software\\'+'Toad Data Point '+aVersionStr+'\\'+'toad.exe';
+    }
+    else{
+        TDPInstallPath = 'C:\\Program Files\\Quest Software\\'+'Toad Data Point '+aVersionStr+'\\'+'toad.exe';
+    }
+            
+    if (aqFileSystem["Exists"](TDPInstallPath)){
+        Log["Message"]('TDP exists in : ' + TDPInstallPath);
+        Win32API["WinExec"](TDPInstallPath, SW_SHOW);
+        Log["Message"]('Lanuching TDP!');
+    }
+    else{
+        Log["Error"]('TDP does not exist in : ' + TDPInstallPath);
+        return;
+    }
+    
+    for (i=1; i<60; i++){
+        //CR already committed, it could be removed after CR is fixed
+        if (Aliases["TDP_toad"]["dlgTrailKey"]["Exists"]){
+            TDP_SkipTrialKey();
+        }
+         if (Aliases["TDP_toad"]["Exists"])
+            break;
+        Delay(1000);
+    }
+                
+    if (Aliases["TDP_toad"]["Exists"]){
+        Log["Message"]('Process "toad" exits!');
+        for (i=1; i<60; i++){
+            if (Aliases["TDP_toad"]["frmMainForm"]["Exists"])
+                break;
+            Delay(1000);
+        }
+        
+        if (Aliases["TDP_toad"]["frmMainForm"]["Exists"]){
+            Log["Message"]('MainForm did show up! Lanuch TDP success!');
+        }
+        else{
+            Log["Error"]('Lanuched TDP timeout, mainform did not show up!');
+            return;
+        }
+    }
+    else{
+        Log["Error"]('Process "toad" does not exit!');
+        return;
+    }
+}
+
+function TDP_WaitForInstallationFinish(){
+var i;
+var TDPInstallerProcess, MainFrame, FinishBtn;
+
+    MainFrame = Aliases["TDPSetup"]["mdTDPSetup"];
+    
+    if (! MainFrame["Exists"]){
+        Aliases["WaitAliasChild"]('TDPSetup', 5000);
+        Aliases["TDPSetup"]["WaitAliasChild"]('mdTDPSetup', 5000);
+    }
+    if (! MainFrame["Exists"]){
+        Log["Error"]('TDP installer main frame does not exist!');
+        return
+    }
+    
+    FinishBtn = MainFrame["FindChild"]('WndCaption', '&Finish');
+    for(i=1; i<600; i++){
+        //CR already committed, it could be removed after CR is fixed
+        if (Aliases["TDP_toad"]["dlgTrailKey"]["Exists"]){
+            TDP_SkipTrialKey();
+        }
+        Delay(1000);
+        Sys["Refresh"]();
+        Aliases["RefreshMappingInfo"]();
+        FinishBtn = MainFrame["FindChild"]('WndCaption', '&Finish');
+        if (FinishBtn["Exists"])
+            break;
+    }
+          
+    if (FinishBtn["Exists"]){
+        Log["Message"]('Installation finished!');
+    }
+    else{
+        Log["Error"]('Installation period more than 10 mins, timeout! Installation failed!');
+        return;
+    }
+}
+
+function TDP_SetupTestEnvironment(aPaths){
+var DirName;
+var i;
+
+    for (i=0; i<BuiltIn["GetListCount"](aPaths,';') - 1; i++){
+        DirName = BuiltIn["GetListItem"](aPaths,i,';');
+        CreateDir(DirName);
+    }
+}
+
+function TDP_CloseTDP(){
+    //CR already committed, it could be removed after CR is fixed
+    Delay(30000);
+    if (Aliases["TDP_toad"]["dlgTrailKey"]["Exists"]){
+        TDP_SkipTrialKey();
+    }
+    
+    if (! Aliases["TDP_toad"]["frmMainForm"]["Exists"]){
+        Aliases["WaitAliasChild"]('TDP_toad', 30000);
+        Aliases["TDP_toad"]["WaitAliasChild"]('frmMainForm', 30000);
+    }
+    
+    if (Aliases["TDP_toad"]["frmMainForm"]["Exists"]){
+        Aliases["TDP_toad"]["frmMainForm"]["Close"]();
+        Log["Message"]('Closing TDP!')
+    }
+    else{
+        Log["Error"]('TDP does not exist! Closing TDP failed!');
+        return;
+    }   
+    
+    Delay(5000);
+    if (Aliases["TDP_toad"]["Exists"]){
+        Log["Error"]('TDP process shutdown failed!');
+        return;
+    }
+    else{
+        Log["Message"]('TDP shutdown success!');
+    }
+}
+
+function TDP_RegisterTDP(){
+var
+    License,SiteMessage;
+var
+    ToadLicenseForm,KeyEditBox,SiteMessageEditBox,ContinueBtn;
+var
+    IntX,IntY;
+
+    if (! Aliases["TDP_toad"]["frmLicenseForm"]["Exists"])
+        Delay(5000);
+    if (! Aliases["TDP_toad"]["frmLicenseForm"]["Exists"]){
+        Log["Message"]('TDP has been registered! Donot need to registered again!');
+        return;
+    }
+    if (Aliases["TDP_toad"]["frmLicenseForm"]["Exists"]){
+        License = Project["Variables"]["LicenseKey"];
+        SiteMessage = Project["Variables"]["SiteMessage"];
+        ToadLicenseForm = Aliases["TDP_toad"]["frmLicenseForm"];
+        IntX = ToadLicenseForm["tlsLicense"]["Width"];
+        IntY = ToadLicenseForm["tlsLicense"]["Height"];
+        ToadLicenseForm["tlsLicense"]["Click"](IntX/2,IntY/4);
+        Delay(1000);
+        ToadLicenseForm["tlsLicense"]["RefreshMappingInfo"]();
+        ToadLicenseForm["tlsLicense"]["Refresh"]();
+        KeyEditBox = ToadLicenseForm["tlsLicense"]["FindChild"]('ClrClassName', 'TextBoxMaskBox', 2);
+        KeyEditBox["Keys"](License);
+        Log["Message"]('Enter license: ' + License);
+        
+        ToadLicenseForm["tlsLicense"]["Click"](IntX/2,IntY * 3/4);
+        Delay(1000);
+        SiteMessageEditBox = ToadLicenseForm["tlsLicense"]["FindChild"]('ClrClassName', 'TextBoxMaskBox', 2);
+        ToadLicenseForm["tlsLicense"]["RefreshMappingInfo"]();
+        SiteMessageEditBox["Keys"](SiteMessage);
+        Log["Message"]('Enter the Site Message: ' + SiteMessage);
+        
+        ContinueBtn = ToadLicenseForm["btnContinue"];
+        if (! ContinueBtn["Enabled"]){
+            Delay(10000);
+        }
+        if (ContinueBtn["Enabled"]){
+            ContinueBtn["Click"]();
+            Log["Message"]('Click "continue" button!');
+        }
+        else{
+            Log["Error"]('The "Continue" button is disabled!');
+            return;
+        }
+    }
+    else{
+        Log["Error"]('License form does not exit!');
+        return;
+    }
+}
+
+function TDP_SkipTrialKey(){
+var NoBtn;
+
+    Aliases["TDP_toad"]["dlgTrailKey"]["WaitAliasChild"]('TDP_btn_No', 30000);
+    NoBtn = Aliases["TDP_toad"]["dlgTrailKey"]["TDP_btn_No"]; 
+    if (! NoBtn["Exists"]){
+        Log["Error"]('Trail Key expires dialog window exists but "No" selection button does not exist! Test process was blocked!');
+        return;
+    }
+    Aliases["TDP_toad"]["dlgTrailKey"]["TDP_btn_No"]["ClickButton"]();
+    Log["Message"]('Click "No" button to skip trail key notification');
+}
+

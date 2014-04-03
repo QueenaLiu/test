@@ -1,0 +1,52 @@
+﻿///////////////////////////////////////////////////////////////////////////////////////
+//
+//  Unit Name     : TerminateTDP
+//  Author        : Roy T.Burns(Royburns.Peng@software.dell.com)
+//  Create Date   : July 25, 2013
+//  Last Modify   : 
+//  Description   : Test Step -- Terminate the TDP.
+//
+//    All rights reserved by TDP Team.
+//
+///////////////////////////////////////////////////////////////////////////////////////
+
+//USEUNIT Common
+//USEUNIT TDPCommon
+//USEUNIT Variable
+//USEUNIT InitialEnv
+//USEUNIT TestSteps
+
+//-------------------------------------------------------------------------------------
+//Function Name : TerminateTDP
+//Author        : Roy T.Burns
+//Create Date   : July 25, 2013
+//Last Modify   : 
+//Description   : Main function of the current test case.
+//Parameter     : null
+//Return        : null
+//-------------------------------------------------------------------------------------
+function TerminateTDP()
+{
+    try
+    {
+        BeginLogFolder(arguments);
+        
+        if(Sys["Process"]("toad")["Exists"])
+        {
+            Sys["Process"]("toad")["Terminate"]();
+            Log["Message"]("Terminate the TDP!");
+        }
+        else
+        {
+            Log["Warning"]("The process is not exists!");
+        }
+    }
+  	catch(e)
+  	{
+  		  Log["Error"](e["description"]);
+  	}
+  	finally
+  	{
+  		  EndLogFolder();
+  	}
+}

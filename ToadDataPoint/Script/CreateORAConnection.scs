@@ -1,0 +1,163 @@
+﻿///////////////////////////////////////////////////////////////////////////////////////
+//
+//  Unit Name     : CreateORAConnection
+//  Author        : Roy T.Burns(Royburns.Peng@software.dell.com)
+//  Create Date   : July 25, 2013
+//  Last Modify   : 
+//  Description   : Test Step -- Create a connection to Oracle.
+//
+//    All rights reserved by TDP Team.
+//
+///////////////////////////////////////////////////////////////////////////////////////
+
+//USEUNIT TDPCommon
+//USEUNIT Variable
+//USEUNIT InitialEnv
+
+// variable
+var s_strFunctionPoint        = "CreateConnections"; // the name of function point name, use it for folder name. 
+var s_strTestConfig           = "CreateConnections.xls";
+
+// Column of excel
+var DBName                    = undefined;
+var User                      = undefined;
+var Password                  = undefined;
+var Schema                    = undefined;
+var Name                      = undefined;
+var Comment                   = undefined;
+
+//-------------------------------------------------------------------------------------
+//Function Name : CreateORAConnection
+//Author        : Roy T.Burns
+//Create Date   : July 25, 2013
+//Last Modify   : 
+//Description   : Main function of the current test case.
+//Parameter     : nID -- test case id, define in excel.
+//Return        : null
+//-------------------------------------------------------------------------------------
+function CreateORAConnection(nID)
+{
+
+    var strConfigFile     = g_strProjectTestConfig + "\\" + s_strFunctionPoint + "\\" + s_strTestConfig;
+    var strSheetName      = "CreateORAConnection"; // test step name, use it for sheet name
+    var objDict           = new ActiveXObject("Scripting.Dictionary");
+    var strConnectName    = "";
+    
+    var bResult           = false;
+    
+    try
+    {
+        BeginLogFolder(arguments);
+        
+        InitialEnvMain();
+        ActivateMainWinForm();
+        Delay(1000);
+    
+        //Get configuration from Excel
+        if(GetDataFromExcelByID(strConfigFile, strSheetName, nID, objDict))
+        {
+            DBName        = objDict["Item"]("DBName");
+            User          = objDict["Item"]("User");
+            Password      = objDict["Item"]("Password");
+            Schema        = objDict["Item"]("Schema");
+            Name          = objDict["Item"]("Name");
+            Comment       = objDict["Item"]("Comment");
+            
+            if(Name != undefined && Name != "")
+            {
+                strConnectName  = Name;
+            }
+            else
+            {
+                //ORA10R2 (TDP_AUTO), TDP_AUTO
+                strConnectName  = DBName + " (" + User + "), " + Schema;
+            }
+        }
+        
+        var frmConnection = Aliases["TDP_toad"]["frmMainForm"]["DockPanel"]
+                                ["ControlContainer"]["AnalystBrowserControl"]
+                                ["connectionManagerControl1"]["connectionControl1"];
+                                    
+        var objFind = frmConnection["connectionList"]["groupingDataPanel"]["Find"]("Value", strConnectName);
+        if(objFind && objFind != undefined && objFind["Exists"])
+        {
+            Log["Message"]("The connection [" + strConnectName + "] is exists!");
+            Reconnect(strConnectName);
+        }
+        else
+        {
+            Log["Message"]("The connection [" + strConnectName + "] is not exists. Waiting to connect...");
+            
+            frmConnection["BarDockControl"]["DockedBarControl"]["btnCreate"]["ClickButton"]();
+            var pnlProviderTop = Aliases["TDP_toad"]["frmConnectionProperties"]["pnlConnectionProperties"]
+                                ["providerTopPanel"];
+            
+            WaitingForObjectWithTime(pnlProviderTop["groupSelectionControl1"], 15);
+            if(pnlProviderTop["groupSelectionControl1"])
+            {
+                pnlProviderTop["groupSelectionControl1"]["Click"](96, 6);
+                pnlProviderTop["groupSelectionControl1"]["Click"](96, 6);
+                //ClickTreeListItem(Aliases["TDP_toad"]["PopupContainerForm"]["PopupContainerControl"]["groupTree"], "Value", "Oracle", 5);
+                Sys["Keys"]("Oracle");
+                Sys["Keys"]('[Enter]');
+                
+                var pnlControl = Aliases["TDP_toad"]["frmConnectionProperties"]
+                              ["pnlConnectionProperties"]["pnlControl"];
+                WaitingForObjectWithTime(pnlControl, 3);
+                var objLogin = Aliases["TDP_toad"]["frmConnectionProperties"]
+                              ["pnlConnectionProperties"]["pnlControl"]
+                              ["pnlOracleConnection"]["xtraTabControlAdvanced"]
+                              ["xtabpageLogin"];
+                              
+                objLogin["cmbServers"]["tbxMaskBox"]["SetText"](DBName);
+                objLogin["tetLogin"]["tbxMaskBox"]["SetText"](User);
+                objLogin["tetPassword"]["tbxMaskBox"]["SetText"](Password);
+                
+                var pnlProviderBtm = Aliases["TDP_toad"]["frmConnectionProperties"]["pnlConnectionProperties"]
+                                    ["pnlProviderBottom"];
+                if(strConnectName != undefined && strConnectName != "")
+                {
+                    pnlProviderBtm["btneName"]["tbxMaskBox"]["SetText"](strConnectName);
+                }
+                pnlProviderBtm["cbxSavePassword"]["ClickButton"](cbChecked);
+                Aliases["TDP_toad"]["frmConnectionProperties"]["btnConnect"]["ClickButton"]();
+            }
+            Delay(3000);
+            if(Aliases["TDP_toad"]["frmMainForm"]["WaitProperty"]('CanFocus', true, 25000) == true)
+            {
+                Log["Message"]("Success!");
+            }
+            else
+            {
+                //Log["Message"]("Have something Unexpected Dialog to process!");
+                //...
+                
+                Log["Error"]("Unexpected Dialog to process! Please check it.");
+            }
+        }
+    }
+    catch(e)
+    {
+        Log["Error"](e.description);
+        //Runner["Stop"]();
+    }
+    finally
+    {
+        EndLogFolder();
+    }
+}
+
+// Main function for test.
+//* This function is only for DEBUG. DO NOT set it in the test group!!!
+function Main()
+{
+    // Test 1
+    var nID     = 2;
+    CreateORAConnection(nID);
+    
+    // Test 2
+    //ActivateWinForm(Aliases["TDP_toad"]["frmConnectionProperties"]);
+    //Aliases["TDP_toad"]["frmConnectionProperties"]["pnlConnectionProperties"]["pnlProviderTop"]["groupSelectionControl1"]["Click"](96, 6);
+    //ClickTreeListItem(Aliases["TDP_toad"]["PopupContainerForm"]["PopupContainerControl"]["groupTree"], "Value", "Sybase ASE", 5);
+}
+//*/

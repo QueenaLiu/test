@@ -1,0 +1,135 @@
+﻿///////////////////////////////////////////////////////////////////////////////////////
+//
+//  Unit Name     : LaunchTDP
+//  Author        : Roy T.Burns(Royburns.Peng@software.dell.com)
+//  Create Date   : July 25, 2013
+//  Last Modify   : 
+//  Description   : Test Step -- Launch the TDP.
+//
+//    All rights reserved by TDP Team.
+//
+///////////////////////////////////////////////////////////////////////////////////////
+
+//USEUNIT TDPCommon
+//USEUNIT Variable
+//USEUNIT InitialEnv
+//USEUNIT LicensingTDP
+
+// variable
+var s_strFunctionPoint        = "Basic"; // the name of function point name, use it for folder name. 
+var s_strTestConfig           = "Basic.xls";
+
+// Column of excel
+var InstallFolder             = undefined;
+var User                      = undefined;
+var Comment                   = undefined;
+
+//-------------------------------------------------------------------------------------
+//Function Name : LaunchTDP
+//Author        : Roy T.Burns
+//Create Date   : July 25, 2013
+//Last Modify   : 
+//Description   : Main function of the current test case.
+//Parameter     : nID -- test case, config it in the excel.
+//Return        : null
+//-------------------------------------------------------------------------------------
+function LaunchTDP(nID)
+{
+    try
+    {
+        BeginLogFolder(arguments);
+        
+        InitialEnvMain();
+        //ActivateMainWinForm();
+        Delay(1000);
+    
+        var strConfigFile     = g_strProjectTestConfig + "\\" + s_strFunctionPoint + "\\" + s_strTestConfig;
+        var strSheetName      = "InstallTDP";
+        var objDict           = new ActiveXObject("Scripting.Dictionary");
+        var InstallPath       = "";
+        var TestedAppIndex    = undefined;
+    
+        var strFileName       = "";
+
+        if(!nID || nID == 0)
+        {
+            Log["Error"]("nID is invalid.");
+            Runner["Stop"]();
+        }
+    
+
+        if(Sys["OSInfo"]["Windows64bit"])
+                nID = nID;
+            else
+                nID = nID + 1;
+
+        TestedAppIndex = Project["Variables"]["GlobalVariables"]["Item"](1, 1);
+        
+        if(TestedAppIndex == undefined || TestedAppIndex == -1)
+        {
+			      Log["Message"]("The tested app is not in, now add it.");
+            if(!GetDataFromExcelByID(strConfigFile, strSheetName, nID, objDict))
+            {
+                throw new Error("Get test data from excel failed.");
+            }
+            
+            InstallPath = objDict.Item("InstallFolder");
+            TestedAppIndex = AddTestedApp(InstallPath, TDPAppName);
+        }
+        
+        PreLaunchApp(TDPProcessName);
+        Log["Message"](TestedAppIndex);
+        LaunchTestedApp(TestedAppIndex);
+        
+        WaitingForObjectWithTime(Aliases["TDP_toad"]["frmMainForm"]["MdiClient"], 20);
+        if(!Aliases["TDP_toad"]["frmMainForm"]["MdiClient"]["Exists"])
+        {
+            LicensingTDP.LicensingTDP();
+        }
+        
+        // Wait some control, to confirm the app is already totally launch or not.
+        //WaitingForObject(Aliases["TDP_toad"]["frmMainForm"]["DockPanel"]["ControlContainer"]
+        //    ["AnalystBrowserControl"]["connectionManagerControl1"]["connectionControl1"]
+        //    ["BarDockControl"]["DockedBarControl"]["btnCreate"]);
+        WaitingForObjectWithTime(Aliases["TDP_toad"]["frmMainForm"]["MdiClient"], 30);
+        ActivateMainWinForm();
+        if(!Aliases["TDP_toad"]["frmMainForm"]["DockPanel"]["Exists"])
+        {
+            Aliases["TDP_toad"]["frmMainForm"]["BarDockControl"]["DockedBarControl"]
+                ["ClickItem"]("View|Navigation Manager");
+        }
+        CheckLaunchApplication(TDPProcessName);
+    }
+    catch(e)
+    {
+        Log["Error"](e.description);
+        Runner["Stop"]();
+    }
+    finally
+    {
+        EndLogFolder();
+    }
+}
+
+// Main function for test.
+/* This function is only for DEBUG. DO NOT set it in the test group!!!
+function Main()
+{
+    // Test 1
+    var nID     = 7; //1, 2
+    LaunchTDP(nID);
+    
+    // Test 2
+    //ActivateWinForm(Aliases["TDP_toad"]["frmConnectionProperties"]);
+    //Aliases["TDP_toad"]["frmConnectionProperties"]["pnlConnectionProperties"]
+    //    ["pnlProviderTop"]["groupSelectionControl1"]["Click"](96, 6);
+    //ClickTreeListItem(Aliases["TDP_toad"]["PopupContainerForm"]["PopupContainerControl"]["groupTree"], "Value", "Sybase ASE", 5);
+    
+    // Test 3
+    //ActivateMainWinForm();
+    //if(!Aliases["TDP_toad"]["frmMainForm"]["DockPanel"]["Exists"])
+    //{
+    //    Aliases["TDP_toad"]["frmMainForm"]["BarDockControl"]["DockedBarControl"]["ClickItem"]("View|Navigation Manager");
+    //}
+}
+//*/

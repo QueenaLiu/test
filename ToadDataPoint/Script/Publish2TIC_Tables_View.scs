@@ -1,0 +1,177 @@
+﻿///////////////////////////////////////////////////////////////////////////////////////
+//
+//  Unit Name     : Publish2TIC_Tables_View
+//  Author        : Roy T.Burns(Royburns.Peng@software.dell.com)
+//  Create Date   : July 25, 2013
+//  Last Modify   : 
+//  Description   : Test Case -- Publish tables to TIC as view.
+//
+//    All rights reserved by TDP Team.
+//
+///////////////////////////////////////////////////////////////////////////////////////
+
+//USEUNIT TDPCommon
+//USEUNIT Variable
+//USEUNIT InitialEnv
+
+//-------------------------------------------------------------------------------------
+//Function Name : Publish2TIC_Tables_View
+//Author        : Roy T.Burns
+//Create Date   : July 25, 2013
+//Last Modify   : 
+//Description   : Main function of the current test case.
+//Parameter     : null
+//Return        : null
+//-------------------------------------------------------------------------------------
+function Publish2TIC_Tables_View()
+{
+    //InitialEnvMain();
+    ActivateMainWinForm();
+    Delay(1000);
+    
+    try
+    {
+        var objPalette = Aliases["TDP_toad"]["frmMainForm"]["DockPanel"]
+                        ["ControlContainer"]["AnalystBrowserControl"]
+                        ["xtraTabControlAnalystTool"]["xtraTabPageObjectPalette"];
+        
+        objPalette["objectPaletteControl1"]["tabs"]["ClickTab"]("Tables");
+        
+        var objTable2Publish = objPalette["objectPaletteControl1"]["leftLeftPanel"]
+                        ["leftList"]["treeList"]["groupingDataPanel"]
+                        ["outlineitemNode2"]["cellNameRow2"];
+        Log["Message"](objTable2Publish);
+        objTable2Publish.ClickR();
+        
+        Aliases["TDP_toad"]["frmSubMenuControl"]["mctrlPopupMenu"]["btnPublish"]["ClickButton"]();
+        
+        WaitingForObjectWithTime(Aliases["TDP_toad"]["PublishingWizardAero"], 5);
+        if(Aliases["TDP_toad"]["PublishingWizardAero"]["Exists"])
+        {
+            Aliases["TDP_toad"]["PublishingWizardAero"]["CenterToScreen"]();
+            
+            Aliases["TDP_toad"]["PublishingWizardAero"]["wctrlPublish"]
+                ["wpgAttribute"]["pnlSummary"]["gctrlMappingDetails"]
+                ["cmbPublishType"]["btnOpen"]["ClickButton"]();
+            Aliases["TDP_toad"]["iefrmPublishType"]
+                ["iebxPublishType"]["lsmView"]["Click"](1, 1);
+            
+            Delay(1000);
+            
+            Aliases["TDP_toad"]["PublishingWizardAero"]["wctrlPublish"]["wpgAttribute"]
+                ["pnlSummary"]["gctrlMappingDetails"]["tetName"]["tbxName"]["SetText"]("TestForTDP");
+            Aliases["TDP_toad"]["PublishingWizardAero"]["wctrlPublish"]["wpgAttribute"]
+                ["pnlSummary"]["gctrlMappingDetails"]["ceOverwrite"]["ClickButton"](cbChecked);
+            Aliases["TDP_toad"]["PublishingWizardAero"]["wctrlPublish"]["WizardButton"]["ClickButton"]();
+        }
+        
+        WaitingForObjectWithTime(Aliases["TDP_toad"]["frmBaseModal"], 5);
+        if(Aliases["TDP_toad"]["frmBaseModal"]["Exists"])
+        {
+            //Aliases["TDP_toad"]["frmBaseModal"]["frmConfirmation"]["cbxDontShow"]["ClickButton"](cbChecked); // DO NOT uncomment this comment.
+            var MsgInfo = "There was an error publishing your object."
+            if(Aliases["TDP_toad"]["frmBaseModal"]["frmConfirmation"]["lblMessage"]["Caption"] == MsgInfo)
+            {
+                //Log["Error"]("There was an error publishing your object.");
+                throw new Error(MsgInfo);
+                // TODO: tack a picture.
+            }
+            else
+            {
+                // TODO: check
+                Log["Error"]("Unexpected Dialog to process! Please check it.");
+                
+                if(Aliases["TDP_toad"]["frmBaseModal"]["frmConfirmation"]["pnlButton"]["btnOk"]["Exists"])
+                {
+                    Aliases["TDP_toad"]["frmBaseModal"]["frmConfirmation"]["pnlButton"]["btnOk"]["ClickButton"]();
+                }
+            }
+            
+            if(Aliases["TDP_toad"]["frmBaseModal"]["frmConfirmation"]["pnlButton"]["btnOk"]["Exists"])
+            {
+                Aliases["TDP_toad"]["frmBaseModal"]["frmConfirmation"]["pnlButton"]["btnOk"]["ClickButton"]();
+            }
+        }
+        
+        //objTable2Publish["ClickR"](6, 7);
+    }
+    catch(e)
+    {
+        Log["Error"](e.description);
+        //Runner["Stop"]();
+    }
+}
+
+//
+function CheckResult()
+{
+    ActivateMainWinForm();
+    Delay(1000);
+    
+    var ORAName             = "ORA10R2 (QUEST_STAGE), QUEST_STAGE";
+    var TICName             = "root@localhost";
+    
+    var Table               = "ACHANG11";
+    var View                = "ACHANG11_VIEW";
+    var groupingDataPanel   = Aliases["TDP_toad"]["frmMainForm"]["DockPanel"]
+                              ["ControlContainer"]["AnalystBrowserControl"]["connectionManagerControl1"]
+                              ["connectionControl1"]["connectionList"]["groupingDataPanel"];
+    
+    var objORA              = groupingDataPanel["Find"]("Value", ORAName, 2);
+    var objTIC              = groupingDataPanel["Find"]("Value", TICName, 2);
+    
+    if(objORA && objORA != undefined)
+    {
+        Log["Message"]("ORA Finded!");
+        
+        objORA["ClickR"](2, 2);
+        var btConnect = Aliases["TDP_toad"]["frmSubMenuControl"]["mctrlPopupMenu"]["Find"]("Caption", "Connect");
+        var btReConnect = Aliases["TDP_toad"]["frmSubMenuControl"]["mctrlPopupMenu"]["Find"]("Caption", "Reconnect");
+        
+        Log["Message"](btConnect["Exists"]);
+        Log["Message"](btConnect["Visible"]);
+        Log["Message"](btConnect["Enabled"]);
+        
+        if(btConnect && btConnect["Enabled"])
+        {
+            btConnect["ClickButton"]();
+        }
+        else
+        {
+            if(btReConnect && btReConnect["Enabled"])
+            {
+                Log["Message"]("Reconnect!");
+                btReConnect["ClickButton"]();
+            }
+            else
+            {
+                Log["Message"]("Failed to Reconnect");
+            }
+        }
+        
+        var objPalette = Aliases["TDP_toad"]["frmMainForm"]["DockPanel"]["ControlContainer"]["AnalystBrowserControl"]["xtraTabControlAnalystTool"]["xtraTabPageObjectPalette"];
+        WaitingForObject(objPalette);
+        objPalette["objectPaletteControl1"]["tabs"]["ClickTab"]("Tables");
+        
+        var objTable = objPalette["objectPaletteControl1"]["leftLeftPanel"]["leftList"]["treeList"]["groupingDataPanel"]["FindChild"]("Value", "ACHANG11", 5);
+        //objTable = objPalette["objectPaletteControl1"]["leftLeftPanel"]["leftList"]["treeList"]["Find"]("Name", "ACHANG11");
+        if(objTable && objTable["Exists"])
+        {
+            Log["Message"]("Find the table!");
+            objTable["ClickButton"]();
+        }
+        else
+        {
+            Log["Message"]("Do not find the table!");
+        }
+    }
+    
+    if(objTIC && objTIC != undefined)
+    {
+        Log["Message"]("TIC Finded!");
+        
+        //objTIC["DblClick"](2, 2);
+        //objTIC["ClickR"](2, 2);
+        //Delay(5000);
+    }
+}

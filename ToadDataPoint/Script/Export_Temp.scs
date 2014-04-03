@@ -1,0 +1,251 @@
+﻿///////////////////////////////////////////////////////////////////////////////////////
+//
+//  Unit Name     : Export_Temp
+//  Author        : Roy T.Burns(Royburns.Peng@software.dell.com)
+//  Create Date   : Oct 10, 2013
+//  Last Modify   : 
+//  Description   : Test Step -- Export Data as excle.
+//
+//    All rights reserved by TDP Team.
+//
+///////////////////////////////////////////////////////////////////////////////////////
+
+//USEUNIT Common
+//USEUNIT TDPCommon
+//USEUNIT Variable
+//USEUNIT InitialEnv
+//USEUNIT ExcelOperator
+
+// variable
+var s_strFunctionPoint        = "Export"; // the name of function point name, use it for folder name. 
+var s_strTestConfig           = "Export.xls";
+
+// Column of excel
+var ConnName                  = undefined;
+var ExportType                = undefined;
+var SourceType                = undefined;
+var DatabaseName              = undefined;
+var Schema                    = undefined;
+var ObjectType                = undefined;
+var ObjectName                = undefined;
+var QueryOrFile               = undefined;
+var OutputFormat              = undefined;
+var ColumnHeader              = undefined;
+var FileName                  = undefined;
+var Overwrite                 = undefined;
+var FixedWidthSize            = undefined;
+var SaveTemplate              = undefined;
+var TemplateName              = undefined;
+var Comment                   = undefined;
+
+//-------------------------------------------------------------------------------------
+//Function Name : ExportData
+//Author        : Roy T.Burns
+//Create Date   : Oct 10, 2013
+//Last Modify   : 
+//Description   : Main function of the current test step.
+//Parameter     : nID -- test case id, define in excel.
+//Return        : null
+//-------------------------------------------------------------------------------------
+function ExportData(nID)
+{
+    //var nID = 14
+    var strConfigFile     = g_strProjectTestConfig + "\\" + s_strFunctionPoint + "\\" + s_strTestConfig;
+    var strSheetName      = "Export";
+    var objDict           = new ActiveXObject("Scripting.Dictionary");
+    var strFilePath       = undefined;
+    
+    var bResult           = false;
+    
+    var conn, menuBar, exportWizard, objType, templateNameBox;
+    
+    try
+    {
+        BeginLogFolder(arguments);
+        
+        InitialEnvMain();
+        ActivateMainWinForm();
+        Delay(1000);
+    
+        //Get configuration from Excel
+        if (GetDataFromExcelByID(strConfigFile, strSheetName, nID, objDict))
+        {
+            ConnName        = objDict["Item"]("ConnName");
+            ExportType      = objDict["Item"]("ExportType");
+            SourceType      = objDict["Item"]("SourceType");
+            DatabaseName    = objDict["Item"]("DatabaseName");
+            Schema          = objDict["Item"]("Schema");
+            ObjectType      = objDict["Item"]("ObjectType");
+            ObjectName      = objDict["Item"]("ObjectName");
+            QueryOrFile     = objDict["Item"]("QueryOrFile");
+            OutputFormat    = objDict["Item"]("OutputFormat");
+            ColumnHeader    = objDict["Item"]("ColumnHeader");
+            FileName        = objDict["Item"]("FileName");
+            Overwrite       = objDict["Item"]("Overwrite");
+            FixedWidthSize  = objDict["Item"]("FixedWidthSize");
+            SaveTemplate    = objDict["Item"]("SaveTemplate");
+            TemplateName    = objDict["Item"]("TemplateName");
+            Comment         = objDict["Item"]("Comment");
+            
+            FileName        = aqString["Replace"](FileName, '/', '\\');
+            strFilePath     = g_strProjectTestData + "\\" + s_strFunctionPoint + "\\" + FileName;
+        }
+        
+        //Check and enable connection
+        conn = GetConnection(ConnName);
+        if(!conn["Exists"])
+        {
+            Log["Error"]('Connection "' + ConnName + '" does not exist!');
+            return false;
+        }
+        else
+        {
+            //conn["DblClick"]();
+            Reconnect(ConnName);
+            Delay(5000);
+        }
+    
+        //Launch Export Wizard
+        //method 1: sometimes will failed
+        //menuBar = Aliases["TDP_toad"]["frmMainForm"]["WinFormsObject"]("BarDockControl", "", 6)["WinFormsObject"]("DockedBarControl", "", 1);
+        //Aliases["TDP_toad"]["frmMainForm"]["BarDockControl"]["DockedBarControl"]["Tools"]
+        //Aliases["TDP_toad"]["frmMainForm"]["BarDockControl"]["DockedBarControl"]["menuitemTools"]["SetFocus"]();
+        //menuBar["ClickItem"]("Tools|Export|Export Wizard*");
+        Aliases["TDP_toad"]["frmMainForm"]["BarDockControl"]["DockedBarControl"]["ClickItem"]("Tools|Export|Export Wizard...");
+
+        //Click Next
+        ButtonClickWithDelay(Aliases["TDP_toad"]["ExportWizard"]["wizardExport"]["pnlButtons"]["btnNext"], 3);
+    
+        //Add Export objects
+        ButtonClickWithDelay(Aliases["TDP_toad"]["ExportWizard"]["wizardExport"]["wpgAddExport"]["pnlExportObjectsList"]["sbtnAddFile"], 3);
+    
+        //Select objects
+        objType = Aliases["TDP_toad"]["ExportWizard"]["wizardExport"]["wpgSelectObjects"]["gctrlExportCategory"]["FindChild"]("Caption", ExportType, 1);
+        if (objType["Exists"])
+        {
+            objType["Click"]();
+            Log["Message"]('Selected ' + ExportType);
+        }
+        else
+        {
+            Log["Error"]("There is not " + ExportType + " object type.");
+            bResult = false;
+        }
+    
+        switch(ExportType)
+        {
+            case 'Tables':
+                Aliases["TDP_toad"]["ExportWizard"]["wizardExport"]["wpgSelectObjects"]["cbxParent"]["ClickItem"](Schema);
+                Aliases["TDP_toad"]["ExportWizard"]["wizardExport"]["wpgSelectObjects"]["clbChildren"]["CheckItem"](ObjectName, true);
+                break;
+            case 'Query File':
+                Aliases["TDP_toad"]["ExportWizard"]["wizardExport"]["wpgSelectObjects"]["btneSQLQuery"]["tbxMaskBox"]["SetText"](QueryOrFile);
+                break;
+            case 'Query':
+                Aliases["TDP_toad"]["ExportWizard"]["wizardExport"]["wpgSelectObjects"]["rtbTextList"]["SetText"](QueryOrFile);
+                break;
+            case 'Text list':
+                Aliases["TDP_toad"]["ExportWizard"]["wizardExport"]["wpgSelectObjects"]["rtbTextList"]["SetText"](QueryOrFile);
+                break;
+            default :
+                Log["Error"]("There is not " + ExportType + " object type.");
+                return false;
+        }
+        Aliases["TDP_toad"]["ExportWizard"]["wizardExport"]["pnlButtons"]["btnNext"]["Click"]();
+    
+        //Select output format
+        Aliases["TDP_toad"]["ExportWizard"]["wizardExport"]["wpgFileFormat"]["gctrlFileFormat"]["cbxFileFormat"]["ClickItem"](OutputFormat);
+        Aliases["TDP_toad"]["ExportWizard"]["wizardExport"]["wpgFileFormat"]["gctrlFileFormat"]["ceHeaderRow"]["Checked"] = ColumnHeader;
+    
+        Aliases["TDP_toad"]["ExportWizard"]["wizardExport"]["pnlButtons"]["btnNext"]["Click"]();
+    
+        //Select columns
+        if (ExportType == 'Tables' || ExportType == 'Text list')
+        {
+            Aliases["TDP_toad"]["ExportWizard"]["wizardExport"]["pnlButtons"]["btnNext"]["Click"]();
+        }
+    
+        //Select output options
+        switch (OutputFormat)
+        {
+            case 'Comma Separated Values':
+                Aliases["TDP_toad"]["ExportWizard"]["wizardExport"]["wpgFileLocation"]["btneFolderFileName"]["tbxMaskBox"]["SetText"](strFilePath);
+                Aliases["TDP_toad"]["ExportWizard"]["wizardExport"]["wpgFileLocation"]["pnlOutput"]["gctrlExistingFile"]["ceFileOverwrite"]["Checked"] = Overwrite;
+                Aliases["TDP_toad"]["ExportWizard"]["wizardExport"]["wpgFileLocation"]["pnlOutput"]["gctrlExistingFile"]["ceAddSuffix"]["Checked"] = false;
+                break;
+            case 'Excel':
+                Aliases["TDP_toad"]["ExportWizard"]["wizardExport"]["wpgExcelOption"]["pnlExcelExportUserControl"]["pnlDestination"]["gctrlExcelDestination"]["btneExcelFolderFileName"]["tbxMaskBox"]["SetText"](strFilePath);
+                Aliases["TDP_toad"]["ExportWizard"]["wizardExport"]["wpgExcelOption"]["pnlExcelExportUserControl"]["pnlOptions"]["pnlOption"]["gctrlOptions"]["cbxHeadeRow"]["Checked"] = ColumnHeader;
+                Aliases["TDP_toad"]["ExportWizard"]["wizardExport"]["wpgExcelOption"]["pnlExcelExportUserControl"]["pnlOptions"]["pnlOption"]["pnlOutputExcel"]["gctrlExistingFile"]["ceFileOverwrite"]["Checked"] = Overwrite;
+                Aliases["TDP_toad"]["ExportWizard"]["wizardExport"]["wpgExcelOption"]["pnlExcelExportUserControl"]["pnlOptions"]["pnlOption"]["pnlOutputExcel"]["gctrlExistingFile"]["WinFormsObject"]("ceAddSuffix")["Checked"] = false;
+                Aliases["TDP_toad"]["ExportWizard"]["wizardExport"]["wpgExcelOption"]["pnlExcelExportUserControl"]["pnlWorksheet"]["pnlWorksheetOptions"]["txtWorksheetName"]["tbxMaskBox"]["SetText"](ObjectName);
+                break;
+            default:
+                Log["Error"]('The output format "' + OutputFormat + '" does not supported.');
+                return false;
+        }
+        Aliases["TDP_toad"]["ExportWizard"]["wizardExport"]["pnlButtons"]["btnNext"]["Click"]();
+        Aliases["TDP_toad"]["ExportWizard"]["wizardExport"]["pnlButtons"]["btnNext"]["Click"]();
+        
+        //Save Template?
+        if(SaveTemplate == "TRUE")
+        {
+            Aliases["TDP_toad"]["ExportWizard"]["wizardExport"]["wpgSaveAsTemplate"]["pnlSaveTemplate"]["ceSave"]["Checked"] = SaveTemplate;
+            templateNameBox = Aliases["TDP_toad"]["ExportWizard"]["wizardExport"]["wpgSaveAsTemplate"]["pnlSaveTemplate"]["btneSaveTemplate"]["tbxMaskBox"];
+            if (templateNameBox["Enabled"])
+            {
+                templateNameBox["Keys"](TemplateName);
+            }
+            else
+            {
+                Log["Error"]('TextBox for template name is disabled.');
+                return false;
+            }
+        }
+        
+        WaitingForObjectWithTime(Aliases["TDP_toad"]["ExportWizard"]["wizardExport"]["pnlButtons"]["btnNext"], 2);
+        if(Aliases["TDP_toad"]["ExportWizard"]["wizardExport"]["pnlButtons"]["btnNext"]["Enabled"])
+        {
+            Aliases["TDP_toad"]["ExportWizard"]["wizardExport"]["pnlButtons"]["btnNext"]["Click"]();
+        }
+        else
+        {
+            Log["Error"]('Next button is disabled.');
+            return false;
+        }
+        
+        //Check export result
+        //var checkResult = CheckExportResult(ObjectName);
+
+        WaitingForObjectWithTime(Aliases["TDP_toad"]["frmBaseModal"], 3);
+        if(Aliases["TDP_toad"]["frmBaseModal"]["Exists"])
+        {
+            if(Aliases["TDP_toad"]["frmBaseModal"]["frmConfirmation"]["pnlButton"]["btnOk"]["Exists"])
+            {
+                Aliases["TDP_toad"]["frmBaseModal"]["frmConfirmation"]["pnlButton"]["btnOk"]["Click"]();
+            }
+            else
+            {
+                Log["Error"]('Finish button is disabled.');
+                return false;
+            }
+        }
+        
+        //return checkResult;
+    }
+    catch(e)
+    {
+        Log["Error"](e.description);
+        //Runner["Stop"]();
+    }
+    finally
+    {
+        EndLogFolder();
+    }
+}
+
+
+function abc()
+{
+    Export_Temp["ExportData"](67);
+}

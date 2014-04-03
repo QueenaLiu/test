@@ -1,0 +1,37 @@
+﻿//USEUNIT TestSteps
+
+
+function InstallTDP(aInstalltionPathStr, aAgreementStr){
+    TDP_LanuchTDPInstaller(aInstalltionPathStr);
+    TDP_ClickNextButton();
+    TDP_ClickNextButton();
+    TDP_LicenseAgreementSelect(aAgreementStr);
+    TDP_ClickNextButton();
+    TDP_ClickNextButton();
+    TDP_ClickNextButton();
+    TDP_ClickNextButton();
+    TDP_ClickNextButton();
+    TDP_WaitForInstallationFinish();
+    TDP_ClickFinishButton();
+}
+
+function CloseTDP(){
+    TDP_CloseTDP();
+}
+
+function LaunchTDP(aVersionStr){
+    TDP_LaunchTDP(aVersionStr);
+}
+
+function test(){
+    subTestStep1();
+    subTestStep2();        
+}
+
+function subTestStep1(){
+    Log["Error"]('error in step 1!')
+}
+
+function subTestStep2(){
+    Log["Error"]('error in step 2!')
+}

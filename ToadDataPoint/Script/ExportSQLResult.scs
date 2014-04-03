@@ -1,0 +1,151 @@
+﻿//USEUNIT InitialEnv
+//USEUNIT ExcelOperator
+//USEUNIT Variable
+//USEUNIT Common
+//USEUNIT TDPCommon
+//USEUNIT ImportConnection
+//USEUNIT Export
+//USEUNIT SQLEditor
+//USEUNIT CreateXLSConnection
+//USEUNIT DataCompare
+
+
+var s_strFunctionPoint  = 'Export';
+var s_strTestConfig     = 'Export.xls'
+
+//-------------------------------------------------------------------------------------
+//Function Name : ExportSQLResult
+//Author        : Hugo He
+//Create Date   : July 25, 2013
+//Last Modify   : 
+//Description   : Main Function, export SQL result after execute SQL script
+//Parameter     : nID in Excel
+//Return        : Boolean
+//-------------------------------------------------------------------------------------
+function ExportSQLResult(nID)
+{
+    var strConfigFile       = g_strProjectTestConfig + "\\" + s_strFunctionPoint + "\\" + s_strTestConfig;
+    var strSheetName        = "ExportSQLResult";
+
+    var objDict             = new ActiveXObject("Scripting.Dictionary");
+    var bCompare            = true;
+    var bReturn             = true;
+    //Excel data variant
+    var nDataCompareID;
+    var strConnName, strSourceType, strDatabaseName, strSourceObjName, strSchema, strObjectType;
+    var strSQL, strExportFileName, strSybaseASEObjName;
+    //Controls
+    var resultPanel, objSourceConn,objSoureObj;
+    try
+    {
+        BeginLogFolder(arguments);
+        
+        InitialEnvMain();
+        ActivateMainWinForm();
+        Delay(1000);
+    
+        //Get ExportData test data from Excel
+        if (GetDataFromExcelByID(strConfigFile, strSheetName, nID, objDict))
+        {
+            strConnName       = objDict["Item"]("ConnName");
+            strSourceType     = objDict["Item"]("SourceType");
+            strDatabaseName   = objDict["Item"]("DatabaseName");
+            strSchema         = objDict["Item"]("Schema");
+            strObjectType     = objDict["Item"]("ObjectType");
+            strSourceObjName  = objDict["Item"]("ObjectName");
+            strExportFileName = objDict["Item"]("FileName");
+            strSQL            = objDict["Item"]("QueryOrFile");
+            nDataCompareID    = objDict["Item"]("DataCompareID");
+        }
+        else
+        {
+            throw new Error('Get data from Export excel failed.');
+        }
+        
+        //Connect to source
+        objSourceConn = GetConnection(strConnName);
+        objSourceConn["DblClick"]();
+        Delay(10000);
+    
+        //Run SQL
+        RunSQLByIDorSQL(strSQL);
+        Delay(5000);
+        resultPanel = Aliases["TDP_toad"]["frmMainForm"]["MdiClient"]["frmMdiDocEditor"]
+                          ["EditorForm"]["ToolWindowContainer_DownGrid"]["toolResults"]["ScriptResultsControl"]
+                          ["tcMain"]["tabResultSets"]["tcResultSets"]["XtraTabPage"]["ScriptResultsGridControl"]
+                          ["ToadGridControl"]["gridControl"]["Data_Panel"];
+        if (resultPanel["Exists"])
+        {
+            resultPanel["ClickR"](resultPanel["Width"]/2, 2);
+            Delay(3000);
+            SendKeys(['[Down]', '[Enter]'], [4, 2]);
+        }
+        else
+        {
+            throw new Error('No record returned.');
+        }
+    
+        //Export
+        if (Export["Export"](nID, strSheetName, 'ObjectGrid'))
+        {
+            Log["Checkpoint"]('Exporting data success');
+        }
+        else
+        {
+            throw new Error('Exporting data failed');
+        }
+        Delay(3000);
+    
+        //Connect Excel to TDP
+        CreateXLSConnection["CreateXLSConnectionWithFile"](strExportFileName, strSourceObjName);
+        
+        if(strSourceType == 'SybaseASE')
+        {
+            strSybaseASEObjName = strSourceObjName;
+            strSourceObjName = strSourceObjName["split"]('.')[1];
+        }
+    
+        //Foucs on source object
+        switch (aqString["ToUpper"](strSourceType))
+        {
+            case 'ORACLE':
+            case 'SQLSERVER':
+                objSoureObj = GetDBObject(strConnName, strSchema, strObjectType, strSourceObjName);
+                break;
+            case 'SYBASEASE':
+                objSoureObj = GetDBObject(strConnName, strSchema, strObjectType, strSourceObjName);
+                break;
+            default:
+                Log["Error"]('Does not support "' + strSourceType + '" data source.');
+        }
+        if(objSoureObj == null)
+        {
+            throw new Error('Cannot find source object.(' + strConnName + ')');
+        }
+        else
+        {
+            objSoureObj["Click"]();
+        }
+        //Compare export result with source table
+        bCompare = DataCompare["DataCompare"](nDataCompareID);
+    
+        if(bCompare == true)
+        {
+            Log["Checkpoint"]('Data match.');
+        }
+        else
+        {
+            throw new Error('Data mismatch!');
+        }
+    }
+    catch(e)
+    {
+        bResult = false;
+        Log["Error"](e["description"]);
+    }
+    finally
+    {
+        EndLogFolder();
+    }
+    return bReturn;
+}

@@ -1,0 +1,895 @@
+﻿//USEUNIT Common
+//USEUNIT TDPCommon
+//USEUNIT Variable
+//USEUNIT ExcelOperator
+
+var s_strFunctionPoint  = 'Publish';
+var s_strTestConfig     = 'Publish.xls'
+
+//-------------------------------------------------------------------------------------
+//Function Name : Publish
+//Author        : Hugo He
+//Create Date   : July 25, 2013
+//Last Modify   : 
+//Description   : Publish object to TIC
+//Parameter     : nID in Excel
+//                publishWay --> 'DataGrid' or 'ObjectList'
+//Return        : boolean
+//-------------------------------------------------------------------------------------
+function Publish(nID, strSheetName)
+{
+    var strConfigFile = g_strProjectTestConfig + "\\" + s_strFunctionPoint + "\\" + s_strTestConfig;
+    
+    //Data in Excel
+    var ticConnName;
+    var publishType, publishName, overwrite, sharing, schedule, createTime, scheduleRefresh;
+    
+    //add by Queena Liu on Mar 10 2014 for adding publish options checking
+    var index, description, tags, destfolder, previewSQL;
+    var arrTags      = new Array();
+    var arrIndex     = new Array();
+    var bResult;
+    //Controls
+    var objTICConn, publishObject, dataGrid, schemaPopupList, frmHyperLink;
+    //other variant
+    var objDict = new ActiveXObject('Scripting.Dictionary');
+    var width, height, scheduleRefreshArr;
+    var bReturn = true;
+    
+    //Get configuration from Excel
+    try
+    {
+        BeginLogFolder(arguments);
+        
+        if (GetDataFromExcelByID(strConfigFile, strSheetName, nID, objDict))
+        {
+            ticConnName       =  objDict["Item"]("TICConnName");
+            publishType       =  objDict["Item"]("PublishType");
+            publishName       =  objDict["Item"]("PublishName");
+            overwrite         =  objDict["Item"]("Overwrite");
+            sharing           =  objDict["Item"]("Sharing");
+            schedule          =  objDict["Item"]("Schedule");
+            createTime        =  objDict["Item"]("CreateTime");
+            scheduleRefresh   = objDict["Item"]("ScheduleRefresh");
+            index             = objDict["Item"]("Index");
+            tags              = objDict["Item"]("Tags");
+            destfolder        = objDict["Item"]("DestFolder");
+            previewSQL        = objDict["Item"]("PreviewSQL");
+            description       = objDict["Item"]("Description");
+            
+        }
+        else
+        {
+            throw new Error('Fail to read Excel data.');
+        }
+        
+        //handle exceptions
+        WaitingForObjectWithTime(Aliases["TDP_toad"]["PublishingWizardAero"]["wctrlPublish"], 5);
+        
+        //Add by Queena Liu on March 12 2014 to set the publish server 
+        Aliases["TDP_toad"]["PublishingWizardAero"]["wctrlPublish"]["wpgAttribute"]["pnlSummary"]["gctrlDestinationOptions"]["cbeConnection"]
+                  ["set_Text"](ticConnName);
+                  
+        //add by Queena Liu on March 11 2014 to select destination folder when publishing
+        if( destfolder != null && destfolder != "") 
+        {
+            Aliases["TDP_toad"]["PublishingWizardAero"]["wctrlPublish"]["wpgAttribute"]["pnlSummary"]["gctrlDestinationOptions"]
+                  ["pctreFolder"]["Click"]();
+              
+            var objFolderCtrl = Aliases["TDP_toad"]["PopupContainerForm"]["PopupContainerControl"]["foldermvctrl"];
+            var objtlsFolder = objFolderCtrl["tlsfselectlst"];
+            SelectDestFolder(objtlsFolder, destfolder, objFolderCtrl);
+            objFolderCtrl["btnOK"]["Click"]();
+        }
+        //Select publish type
+        Aliases["TDP_toad"]["PublishingWizardAero"]["wctrlPublish"]["wpgAttribute"]
+            ["pnlSummary"]["gctrlMappingDetails"]["cmbPublishType"]["Click"]();
+        Aliases["TDP_toad"]["iefrmPublishType"]["iebxPublishType"]
+            ["SelectItem"](publishType);
+    
+        //Insert publish name
+        Aliases["TDP_toad"]["PublishingWizardAero"]["wctrlPublish"]["wpgAttribute"]
+            ["pnlSummary"]["gctrlMappingDetails"]["tetName"]["Keys"](publishName);
+    
+        //Select Overwrite exists object
+        if (overwrite)
+        {
+            Aliases["TDP_toad"]["PublishingWizardAero"]["wctrlPublish"]["wpgAttribute"]
+                ["pnlSummary"]["gctrlMappingDetails"]["ceOverwrite"]["wState"]=1;
+        }
+        else
+        {
+            Aliases["TDP_toad"]["PublishingWizardAero"]["wctrlPublish"]["wpgAttribute"]
+                ["pnlSummary"]["gctrlMappingDetails"]["ceOverwrite"]["wState"]=0;
+        }
+        
+        
+
+        
+        //Add by Queena Liu on March 11 2014 to add Description and Tags checking for publishing
+        // Description
+        if( description != "" && description != null ) 
+        {
+           var objDesc = Aliases["TDP_toad"]["PublishingWizardAero"]["wctrlPublish"]["wpgAttribute"]["pnlSummary"]["moeDescription"]["tbxMaskBox"];
+           objDesc["SetText"](description);
+           Log["Message"]("Set the Description as " + description);
+           
+           //add description checking
+        }
+        else
+        {
+            Log["Message"]("Description is not provided. Please check the Excel data.");
+        }
+        
+        // Tags
+        if( tags != "" && tags != null ) 
+        {
+           arrTags = tags["split"]('|');
+           var objTagCtr = Aliases["TDP_toad"]["PublishingWizardAero"]["wctrlPublish"]["wpgAttribute"]["pnlSummary"]["tagitTag"]["lpnlTagContainer"];
+           objTagCtr["lbl_AddTag"]["Click"]();
+           for( i in arrTags )
+           {
+              objTagCtr["cmbEdit"]["tbmaskbox"]["SetText"]( arrTags[i] );
+              Log["Message"]("Added Tag " + arrTags[i]);
+              if( i < arrTags["length"] - 1 ) 
+              {
+                 objTagCtr["Keys"]("[Tab]"); 
+              }
+           }
+           //add tags checking
+        }
+    
+        //Set Share option
+        Aliases["TDP_toad"]["PublishingWizardAero"]["wctrlPublish"]["wpgAttribute"]
+            ["pnlSummary"]["linkLabelSharing"]["Click"]();
+        switch (sharing)
+        {
+            case 'anyone':
+                Aliases["TDP_toad"]["PublishingWizardAero"]["wctrlPublish"]["wpgSharing"]
+                    ["vctrlSharing"]["gctrlOptions"]["rgrpOptions"]["rbtnShareAny"]["Click"]();
+                break;
+            case 'Private':
+                Aliases["TDP_toad"]["PublishingWizardAero"]["wctrlPublish"]["wpgSharing"]
+                    ["vctrlSharing"]["gctrlOptions"]["rgrpOptions"]["rbtnPrivate"]["Click"]();
+                break;
+            default:
+                Log["Warning"]('Error share choice "'+sharing+'"');
+                break;
+        }
+        
+        //Move window to center of screen, avoid overlapping
+        Aliases["TDP_toad"]["PublishingWizardAero"]["CenterToScreen"]();
+        Aliases["TDP_toad"]["PublishingWizardAero"]["wctrlPublish"]["btnApply"]["ClickButton"]();
+        
+        //Add by Queena Liu on March 11 2014 to add the Index option checking for publishing
+        //Only View doesn't have Indexing 
+        if( publishType["toUpperCase"]() != 'VIEW')
+        {
+            if( index != ""  && index != null)
+            {
+                Aliases["TDP_toad"]["PublishingWizardAero"]["wctrlPublish"]["wpgAttribute"]["pnlSummary"]["llblIndexing"]["Click"]();
+                Delay(1000);
+            
+                arrIndex = index["split"]('|');
+                for( i in arrIndex )
+                {
+                    var objGrdctrlCols = Aliases["TDP_toad"]["PublishingWizardAero"]["wctrlPublish"]["wpgIndexing"]["ctrlPublishingIndexing"]["gctrlMapping"]["grdctrlColumns"];
+                    var nRow = objGrdctrlCols["FindRow"]("Column Name", arrIndex[i]);
+                    if( nRow < 0 )
+                    {
+                        Log["Message"]("Please provide correct Indexing column");
+                    }
+                    else
+                    {
+                        objGrdctrlCols["wValue"](nRow, "Indexed") = true ; 
+                        Log["Message"](arrIndex[i] + " column Indexed");
+                    }
+                }
+                Aliases["TDP_toad"]["PublishingWizardAero"]["wctrlPublish"]["btnApply"]["Click"]();
+            
+                //Add index checking
+            
+            }
+            else
+            {
+                Log["Message"]("Index options is not provided. Please check your Excel data.");
+            }
+        }
+    
+        //Set schedule to daily
+        //Only snapshot has Scheduling
+        if( publishType["toUpperCase"]() != 'SNAPSHOT')
+        {
+            if (schedule)
+            {
+                Aliases["TDP_toad"]["PublishingWizardAero"]["wctrlPublish"]["wpgAttribute"]
+                    ["pnlSummary"]["llblRefresh"]["Click"]();
+        
+                Aliases["TDP_toad"]["PublishingWizardAero"]["wctrlPublish"]["wpgSnapshotRefresh"]
+                    ["publishingSnapshotSchedueler1"]["gctrlCreateSnapshot"]["rbtnCreateSnapshot"]["ClickItem"](createTime);
+        
+                scheduleRefreshArr = scheduleRefresh['split']('|');
+                Aliases["TDP_toad"]["PublishingWizardAero"]["wctrlPublish"]["wpgSnapshotRefresh"]
+                    ["sdrSnapshot"]["gctrlRefresh"]["cbxScheduleType"]["btnOpen"]["Click"]();
+                Aliases["TDP_toad"]["PublishingWizardAero"]["wctrlPublish"]["wpgSnapshotRefresh"]
+                    ["sdrSnapshot"]["gctrlRefresh"]["cbxScheduleType"]["tbxMaskBox"]["Keys"](scheduleRefreshArr[0]);
+    
+                Aliases["TDP_toad"]["PublishingWizardAero"]["wctrlPublish"]["wpgSnapshotRefresh"]
+                    ["sdrSnapshot"]["gctrlRefresh"]["gctrlDaily"]["seDaily"]["Keys"](scheduleRefreshArr[1]);
+                Aliases["TDP_toad"]["PublishingWizardAero"]["wctrlPublish"]["wpgSnapshotRefresh"]
+                    ["sdrSnapshot"]["gctrlRefresh"]["gctrlDaily"]["dailyTimeEdit"]["Keys"](scheduleRefreshArr[2]);
+                Aliases["TDP_toad"]["PublishingWizardAero"]["wctrlPublish"]["btnApply"]["ClickButton"]();
+            }
+        }
+        
+        //Add by Queena Liu on March 10 2014 to add Preview SQL options when publishing 
+        if( previewSQL != ""  && previewSQL != null)
+        {
+            // previewSQL Click the preview SQL link to check the SQL
+            Aliases["TDP_toad"]["PublishingWizardAero"]["wctrlPublish"]["wpgAttribute"]["pnlSummary"]["llblSQL"]["Click"]();
+            Delay(1000);
+            
+            var strActSQL = Aliases["TDP_toad"]["PublishingWizardAero"]["wctrlPublish"]["wpgSQL"]["ectrl"]["syntaxEditor"]["Caption"];
+            strActSQL = aqString["Replace"](strActSQL,"\r\n","");
+            if( strActSQL == previewSQL )
+            {
+              Log["Checkpoint"]("Preview SQL is correct,it is " + strActSQL);
+            }
+            else
+            {
+              Log["Message"]("Not correct.Expected SQL is '" + previewSQL + "'");
+              Log["Message"]("The SQL in the screen is '" + strActSQL +"'" );
+            }
+            Aliases["TDP_toad"]["PublishingWizardAero"]["wctrlPublish"]["btnBack"]["Click"]();
+
+        }
+        else
+        {
+          Log["Message"]("Preview SQL is not provided.Please check your Excel data.");
+        }
+        
+        //Click 'Publish' button
+        Aliases["TDP_toad"]["PublishingWizardAero"]["wctrlPublish"]["WizardButton"]["ClickButton"]();
+        
+        
+        //Click Link
+        for (var i=1; i<=30; i++)
+        {
+            frmHyperLink = Aliases["TDP_toad"]["frmBaseModal"]["frmConfirmation"]["pnlPublishingWizardConfirmationControl"]["hlePublishedObject"];
+            if (frmHyperLink["Exists"] && frmHyperLink["Visible"])
+            {
+                break;
+            }
+            Delay(1000);
+        }
+        if (frmHyperLink["Exists"] && frmHyperLink["Visible"])
+        {
+            //frmHyperLink["Click"]();  -- Comment this because sometimes it can't get the object 
+            Aliases["TDP_toad"]["frmBaseModal"]["frmConfirmation"]["pnlButton"]["btnOk"]["Click"]();
+            if(strSheetName == 'PublishXQuery') CloseAllQueryBuilder();
+            if(strSheetName == 'PublishXQueryEditor')  CloseAllEditor();
+            Log["Message"]('Publish finished!');
+        }
+        else
+        {
+            Log["Warning"]('Publish succeed window does not exist. Publish maybe failed.');
+            
+            var objPicture = Sys["Desktop"]["Picture"]();
+            Log["Picture"](objPicture, "Screen Image");
+        }
+        
+        bReturn = CheckPublishResult(objDict);
+        //publishFlag = CheckPublishInfo(objDict);
+    }
+    catch(e)
+    {
+        bReturn = false;
+        Log["Error"](e["description"]);
+        throw e;
+    }
+    finally
+    {
+        return bReturn;
+    }
+}
+
+
+//-------------------------------------------------------------------------------------
+//Function Name : CheckPublishInfo
+//Author        : Hugo He
+//Create Date   : July 25, 2013
+//Last Modify   : 
+//Description   : Check publish type, share state, refresh state
+//Parameter     : objDict --> Scripting.Dictionary object contain publish info from excel
+//Return        : boolean
+//-------------------------------------------------------------------------------------
+function CheckPublishInfo(objDict)
+{
+    var publishObject, infoDataGrid;
+    var publishType, publishShared, publishRefresh, publishRefresh2, scheduleRefreshArr = new Array();
+    var sharedStatus;
+    var bReturn = true;
+
+    try
+    {
+        publishObject = GetTICObject(objDict["Item"]("PublishName"));
+        if (publishObject == null || !publishObject["Exists"])
+        {
+            Reconnect["Reconnect"](objDict["Item"]("TICConnName"));
+            publishObject = GetTICObject(objDict["Item"]("PublishName"));
+            
+            if (publishObject == null || !publishObject["Exists"])
+            {
+                throw new Error('Snapshot does not exist!');
+            }
+        }
+        
+        publishObject["DblClick"]();
+        Delay(3000);
+        
+        //Click Information
+        Aliases["TDP_toad"]["frmMainForm"]["MdiClient"]["frmMdiDocViewer"]["ObjectViewerForm"]["RhsObject"]
+            ["TabbedMdiRootContainer"]["TabbedMdiContainer"]["DockTabStrip"]["Click"](123, 16);
+    
+        infoDataGrid = Aliases["TDP_toad"]["frmMainForm"]["MdiClient"]["frmMdiDocViewer"]["ObjectViewerForm"]
+            ["RhsObject"]["TabbedMdiRootContainer"]["TabbedMdiContainer"]["DockTabStrip"]["TabStripPage3"]["DocumentWindow"]
+            ["BasePropertyViewControl"]["verticalGridControl"]["gridControl"];
+        publishType = infoDataGrid["GetCellDisplayText"](infoDataGrid["GetRowByFieldName"]('Type'), 0);
+        publishRefresh = infoDataGrid["GetCellDisplayText"](infoDataGrid["GetRowByFieldName"]('Refresh interval'), 0);
+        publishRefresh2 = infoDataGrid["GetCellDisplayText"](infoDataGrid["GetRowByFieldName"]('Next refresh'), 0);
+        publishRefresh2 = aqString["SubString"](publishRefresh2, aqString["Find"](publishRefresh2, ' ')+1, 8);
+        publishShared = infoDataGrid["GetCellDisplayText"](infoDataGrid["GetRowByFieldName"]('Users shared with'), 0);
+        if (objDict["Item"]("Schedule") == true && objDict["Item"]("ScheduleRefresh") != null)
+            scheduleRefreshArr = objDict["Item"]("ScheduleRefresh")['split']('|') ;
+    
+        if (publishType != objDict["Item"]("PublishType")["toUpperCase"]())
+        {
+            throw new Error('Published type is "'+publishType+'", expected "'+objDict["Item"]("PublishType")["toUpperCase"]()+'"');
+        }
+        switch (objDict["Item"]("Sharing"))
+        {
+          case 'anyone':
+            sharedStatus = 'anyone'; 
+            break;
+          case 'Private':
+            sharedStatus = 'none';
+            break;
+        }
+        if (publishShared != sharedStatus)
+        {
+            throw new Error('Published type is "'+publishShared+'", expected "'+sharedStatus+'"');
+        }
+        if (objDict["Item"]("Schedule") == true){
+            if (publishRefresh != 'every '+scheduleRefreshArr[1]+' day(s)'){
+                throw new Error('Published refresh is "'+publishRefresh+'", expected "every '+scheduleRefreshArr[1]+' day(s)"');
+            }
+            if (publishRefresh2 != scheduleRefreshArr[2]){
+                throw new Error('Published refresh time is "' +publishRefresh2+ '", expected "'+scheduleRefreshArr[2]+'"');
+            }
+        }
+        else
+        {
+            if (publishRefresh != 'none')
+            {
+                throw new Error('Published refresh is "'+publishRefresh+'", expected "none"');
+            }
+            if (publishRefresh2 != 'none')
+            {
+                throw new Error('Published refresh time is "' +publishRefresh2+ '", expected "none"');
+            }
+        }
+    }
+    catch(e)
+    {
+        bReturn = false;
+        Log["Error"](e["description"]);
+        throw e;
+    }
+    finally
+    {
+        EndLogFolder();
+    }
+    return bReturn;
+}
+
+//-------------------------------------------------------------------------------------
+//Function Name : CheckPublishResult
+//Author        : Queena Liu
+//Create Date   : March 12 2014
+//Last Modify   : 
+//Description   : Check publish Options
+//Parameter     : objDict --> Scripting.Dictionary object contain publish info from excel
+//Return        : boolean bReturn
+//-------------------------------------------------------------------------------------
+function CheckPublishResult(objDict)
+{
+    var publishObject;
+    var publishShared, publishRefresh, publishRefresh2, scheduleRefreshArr = new Array();
+    var sharedStatus;
+    var bReturn = true;
+    var objTICConn;
+    var ticConnName, publishType, publishName, overwrite;
+    var index, tags, description;
+    var sharing, schedule, createTime, scheduleRefresh;
+    
+    var arrTags;
+    
+    try 
+    {
+        BeginLogFolder(arguments);
+        
+        ticConnName       =  objDict["Item"]("TICConnName");
+        publishType       =  objDict["Item"]("PublishType");
+        publishName       =  objDict["Item"]("PublishName");
+        sharing           =  objDict["Item"]("Sharing");
+        schedule          =  objDict["Item"]("Schedule");
+        createTime        =  objDict["Item"]("CreateTime");
+        scheduleRefresh   =  objDict["Item"]("ScheduleRefresh");
+        index             =  objDict["Item"]("Index");
+        tags              =  objDict["Item"]("Tags");
+        description       =  objDict["Item"]("Description");
+        DestFolder        =  objDict["Item"]("DestFolder");
+        
+        objTICConn = GetConnection(ticConnName);
+        if (! objTICConn["Exists"])
+        {
+            throw new Error('TIC connection "'+ticConnName+'" does not exist!');
+        }
+        else
+        {
+            Reconnect(ticConnName);
+            Delay(3000);
+        }
+        
+        var objTreelist = Aliases["TDP_toad"]["frmMainForm"]["DockPanel"]["ControlContainer"]
+            ["AnalystBrowserControl"]["xtraTabControlAnalystTool"]["xtraTabPageObjectPalette"]
+            ["objectPaletteControl1"]["leftLeftPanel"]["leftList"]["treeList"];
+        
+        //Refresh Item to get the latest items    
+        objTreelist["CollapseAll"]();  
+        Delay(3000);  
+        objTreelist["ClickR"]();
+        var objPMenu = Aliases["TDP_toad"]["frmSubMenuControl"]["mctrlPopupMenu"];
+        var btnRefresh = objPMenu["Find"]("Caption", "Refresh Item");
+        btnRefresh["Click"]();
+        Delay(30000);
+        objTreelist["CollapseAll"]();   
+        Delay(3000);
+        /*
+        //Comment this because it can't find the object with the same name
+        publishObject = GetDestFolderObject(objTreelist, DestFolder, publishName);   
+        Delay(3000);
+        publishObject["DblClick"]();
+        */
+        
+        var nIndex;
+        var nPattern = 0;
+        if( DestFolder == null || DestFolder =="") DestFolder = "No folder assigned";
+        /*
+        if(strSheetName == 'PublishXQuery') 
+        {
+            nPattern = 2;
+        }
+        else 
+        {
+            nPattern = 0;
+        }
+        */
+        publishObject = FindTlCObject(objTreelist, DestFolder,publishName,nPattern,ticConnName);
+       // publishObject = GetFinalTICObject(objTreelist, nIndex);
+        Delay(3000);
+        var objCol = Aliases["TDP_toad"]["frmMainForm"]["DockPanel"]["ControlContainer"]
+          ["AnalystBrowserControl"]["xtraTabControlAnalystTool"]["xtraTabPageObjectPalette"]
+          ["objectPaletteControl1"]["leftLeftPanel"]["collapsibleSplitter"];
+        if(objCol["Exists"] && objCol["VisibleOnScreen"] && objCol["get_IsCollapsed"]()==false)
+        {  
+            objCol["Collapse"]();
+            Delay(2000);
+        }
+        publishObject["DblClick"]();
+        Delay(3000);
+       
+        /*
+        //Comment this because can't get the object when click the hyperlink in the publish confirmation window
+        var objTICTreelist = Aliases["TDP_toad"]["frmMainForm"]["DockPanel"]["ControlContainer"]["AnalystBrowserControl"]
+                          ["xtraTabControlAnalystTool"]["xtraTabPageObjectPalette"]["objectPaletteControl1"]["leftLeftPanel"]["leftList"]["treeList"];
+                          
+        // GetTreelistObject(objTICTreelist);
+        var objTICObject;
+        //Check the destination folder is correct
+        bReturn = CheckDestFolderExist( objTICTreelist, DestFolder);
+        GetFocusedTreelistObject( objTICTreelist )["DblClick"]();
+        Delay(3000);
+        */
+        
+        //Click Information
+        var objTabStrip = Aliases["TDP_toad"]["frmMainForm"]["MdiClient"]["frmMdiDocViewer"]["ObjectViewerForm"]["RhsObject"]
+                                  ["TabbedMdiRootContainer"]["TabbedMdiContainer"]["DockTabStrip"];
+        
+        // Information Index  Snapshot  2
+        // Information Index  Dataset and View 1
+        if(  publishType["toUpperCase"]() == "SNAPSHOT" )                       
+        {
+            objTabStrip["SelectedPage"] = objTabStrip["Controls"]["Item_2"](2);
+            var objInfoGridCtrl = objTabStrip["TabStripPage3"]["DocumentWindow"]["BasePropertyViewControl"]
+                                      ["verticalGridControl"]["gridControl"];
+        }
+        else
+        {
+            objTabStrip["SelectedPage"] = objTabStrip["Controls"]["Item_2"](1);
+            var objInfoGridCtrl = objTabStrip["TabStripPage2"]["DocumentWindow"]["BasePropertyViewControl"]
+                                      ["verticalGridControl"]["gridControl"];
+        }
+        
+                                 
+       // var strToDesc = objInfoGridCtrl["wValue"](0, "Description")["OleValue"];
+        var strToTags = objInfoGridCtrl["wValue"](0, "Tags")["OleValue"];
+        var strToType = objInfoGridCtrl["wValue"](0, "Type")["OleValue"];
+        
+        //There is defect QAT-2189 that Dataset doesn't have Description  
+        //don't check Description for dataset and view for now until it's fixed
+        //Check Description
+        if( publishType["toUpperCase"]() == 'SNAPSHOT')
+        {
+            var strToDesc = objInfoGridCtrl["wValue"](0, "Description")["OleValue"];
+            if( description != null && description != "" && strToDesc == description )
+            {
+                Log["Checkpoint"]("Publish Description " + strToDesc + " is correct.");
+            }
+            else
+            {
+                if(objDict["Item"]("Tags")== null)
+                {
+                    Log["Message"]("Description is not provided. Please check Excel Data.");
+                }
+                else
+                {
+                    bReturn = false;
+                    Log["Error"]("Description '"+ strToDesc  + "' is not expected '"+ description + "'.");
+                }
+            } 
+        }
+        
+        //Check Publish Type
+        if( publishType != null && publishType != "" && strToType["toUpperCase"]() == publishType["toUpperCase"]() )
+        {
+            Log["Checkpoint"]("Publish Type " + publishType + " is correct.");
+        }
+        else
+        {
+            if( publishType == null )
+            {
+                Log["Message"]("Publish Type is not provided. Please check Excel Data.");
+            }
+            else
+            {
+                bReturn = false;
+                Log["Error"]("Publish Type '" + strToType  + "' is not expected '" + publishType + "'.");
+            }
+        } 
+        
+        //Check Tags
+        if( tags != null && tags != "" )
+        {
+            arrTags = tags["split"]('|');
+            var nResult = 0;
+            for( i in arrTags)
+            {
+                var nFind = aqString["Find"]( strToTags, arrTags[i] );
+                if( nFind != -1 )
+                {
+                    nResult += 1;   
+                    if( nResult == arrTags["length"] )
+                    {
+                        Log["Checkpoint"]("Tags " + tags + " is correct.");
+                    }
+                }
+                else
+                {
+                    bReturn = false;
+                    Log["Error"]("Didn't Find the Tag " + arrTags[i] );
+                    break;
+                }
+            }
+        }
+        else
+        {   
+            Log["Message"]("Tags is not provided. Please check Excel Data.");    
+        } 
+        
+        //Check share Modified some code from Hugo
+        publishShared = objInfoGridCtrl["GetCellDisplayText"](objInfoGridCtrl["GetRowByFieldName"]('Users shared with'), 0);
+        
+       //Sharing checking
+        switch (objDict["Item"]("Sharing"))
+        {
+          case 'anyone':
+            sharedStatus = 'anyone'; 
+            break;
+          case 'Private':
+            sharedStatus = 'none';
+            break;
+        }
+        if(publishShared != sharedStatus)
+        {
+            throw new Error('Published type is "'+publishShared+'", expected "'+sharedStatus+'"');
+        }
+        else
+        {
+            Log["Checkpoint"]("Users shared with " +  sharedStatus + " correctly.");
+        }
+        
+        // Schedule Checking
+        //Only snapshot has Scheduling
+        if( publishType["toUpperCase"]() == 'SNAPSHOT')
+        {
+            publishRefresh = objInfoGridCtrl["GetCellDisplayText"](objInfoGridCtrl["GetRowByFieldName"]('Refresh interval'), 0);
+            publishRefresh2 = objInfoGridCtrl["GetCellDisplayText"](objInfoGridCtrl["GetRowByFieldName"]('Next refresh'), 0);
+            publishRefresh2 = aqString["SubString"](publishRefresh2, aqString["Find"](publishRefresh2, ' ')+1, 8);
+            if( schedule == true && scheduleRefresh != null)
+                scheduleRefreshArr = scheduleRefresh['split']('|') ;
+            if( schedule == true )
+            {
+                if(publishRefresh != 'every '+scheduleRefreshArr[1]+' day(s)')
+                {
+                    throw new Error('Published refresh is "'+publishRefresh+'", expected "every '+scheduleRefreshArr[1]+' day(s)"');
+                }
+                else
+                {
+                    Log["Checkpoint"]("Publish " + publishRefresh + " correctly.");
+                }
+                if(publishRefresh2 != scheduleRefreshArr[2])
+                {
+                    throw new Error('Published refresh time is "' +publishRefresh2+ '", expected "'+scheduleRefreshArr[2]+'"');
+                }
+                else
+                {
+                    Log["Checkpoint"]("Publish " + publishRefresh2 + " correctly.");
+                }
+            }
+            else
+            {
+                if(publishRefresh != 'none')
+                {
+                    throw new Error('Published refresh is "'+publishRefresh+'", expected "none"');
+                }
+                if(publishRefresh2 != 'none')
+                {
+                    throw new Error('Published refresh time is "' +publishRefresh2+ '", expected "none"');
+                }
+            }
+        }
+        
+        //Only View doesn't have Indexing 
+        //There is defect QAT-2169 that Dataset doesn't have Indexes tab 
+        //Only check Snapshot for now util QAT-2169 is fixed
+        //if( publishType["toUpperCase"]() != 'VIEW')
+        if( publishType["toUpperCase"]() == 'SNAPSHOT')
+        {
+            //Click Index
+            Delay(3000);
+            objTabStrip["SelectedPage"] = objTabStrip["Controls"]["Item_2"](3);
+            var objIndexGridCtrl = objTabStrip["TabStripPage4"]["DocumentWindow"]["BaseGridViewControl"]["grid"]["gridControl"];
+            if( index != null && index != "" )
+            {
+                arrIndex = index["split"]('|'); 
+                var nResult1 = 0;
+                if( arrIndex["length"] = objIndexGridCtrl["wRowCount"] )
+                {
+                    for( i in arrIndex )
+                    {
+                        for(var j = 0; j < objIndexGridCtrl["wRowCount"]; j++ )
+                        {
+                            var strToIndex = objIndexGridCtrl["wValue"](j, "Column_name *");
+                            if( strToIndex == arrIndex[i] )
+                            {
+                                nResult1 += 1;
+                                break;
+                            }
+                        }
+                    }
+                    if( nResult1 == arrIndex["length"] )
+                    {
+                        Log["Checkpoint"]("Index " + index + " indexed successful.");
+                    }
+                    else
+                    {
+                        bReturn = false;
+                        Log["Error"]("Index Error. Please check your Data.");
+                    }
+                }
+                else
+                {
+                    bReturn = false;
+                    Log["Error"]("Index Error. Please check your Data.");
+                }
+            }
+            else
+            {   
+                Log["Message"]("Index column is not provided. Please check Excel Data.");    
+            } 
+        }
+    }
+    catch(e)
+    {
+        bReturn = false;
+        Log["Error"](e["description"]);
+        throw e;
+    }
+    finally
+    {
+        EndLogFolder();
+    }
+    return bReturn;
+}
+
+
+//-------------------------------------------------------------------------------------
+//Function Name : SelectDestFolder
+//Author        : Queena Liu
+//Create Date   : March 12 2014
+//Last Modify   : 
+//Description   : Select Destination Folder if exist, create Destination folder if doesn't exist
+//Parameter     : objTreelist     --> Treelist Object
+//              : strPath         --> Path eg. datapublish/testdata
+//              : objCtrl         --> Control that includes objTreelist                
+//Return        : none
+//-------------------------------------------------------------------------------------
+function SelectDestFolder(objTreelist, strPath, objCtrl)
+{
+    var arrPath;
+    var nResult = 0;
+    var objOrigTreelist = objTreelist;
+    objTreelist = objTreelist["Nodes"]["Item"](0);
+    
+    try
+    {
+        BeginLogFolder(arguments);
+        
+        arrPath = strPath["split"]('/');
+        for( var i = 0; i < arrPath["length"]; i++ )
+        {
+            if( objTreelist["Nodes"]["Count"] < 1 ) 
+            {
+                objCtrl["btnNewFolder"]["Click"]();
+                objTreelist = objOrigTreelist["get_FocusedNode"]();  
+                objTreelist["SetValue"]("Name",arrPath[i]);
+            }
+            else
+            {
+                for(var j = 0; j < objTreelist["Nodes"]["Count"] ; j++)
+                {
+                    var strNodeName = objTreelist["Nodes"]["Item"](j)["GetDisplayText"]("Name");
+                    if( strNodeName == arrPath[i] ) 
+                    {
+                        nResult = 1;
+                        objTreelist = objTreelist["Nodes"]["Item"](j);  
+                        objTreelist["set_Selected"](true);
+                        objTreelist["set_Expanded"](true);
+                        break;
+                    }
+                    else
+                    {
+                        nResult = 0;
+                    }
+                }
+                if( nResult == 0 )
+                {
+                    objCtrl["btnNewFolder"]["Click"]();
+                    objTreelist = objOrigTreelist["get_FocusedNode"]();
+                    objTreelist["SetValue"]("Name",arrPath[i]);
+                }
+            }
+         }
+    }
+    catch(e)
+    {
+        Log["Error"](e["description"]);
+    }
+    finally
+    {
+        EndLogFolder();
+    }
+}
+
+//-------------------------------------------------------------------------------------
+//Function Name : GetFocusedTreelistObject
+//Author        : Queena Liu
+//Create Date   : March 12 2014
+//Last Modify   : 
+//Description   : Get the focused node of the treelist object
+//Parameter     : objTreelist     --> Treelist Object            
+//Return        : objToObj
+//-------------------------------------------------------------------------------------
+function GetFocusedTreelistObject(objTreelist) 
+{
+    objTreelist["WaitProperty"]("AutoFocusNodeOnExpandButtonClick", true, 5000);
+    var nIndex   = objTreelist["focusedRowIndex_2"];
+    //["UIAObject"]("Data_Panel")["UIAObject"]("Node11")["UIAObject"]("Name_row_11")
+    var objToObj = objTreelist["UIAObject"]("Data_Panel")["UIAObject"]("Node"+nIndex)["UIAObject"]("Name_row_" + nIndex);
+    return objToObj;
+}
+
+
+//-------------------------------------------------------------------------------------
+//Function Name : CheckDestFolderExist
+//Author        : Queena Liu
+//Create Date   : March 17 2014
+//Last Modify   : 
+//Description   : Check if the destination folder is correct
+//Parameter     : objTreelist     --> Treelist Object 
+//                strDestFolder   --> The destination folder           
+//Return        : boolean bReturn
+//-------------------------------------------------------------------------------------
+function CheckDestFolderExist(objTreelist, strDestFolder) 
+{
+    objTreelist["WaitProperty"]("AutoFocusNodeOnExpandButtonClick", true, 5000);
+    var bReturn;
+    var objNode       = objTreelist["get_FocusedNode"]();
+    var strCurrFolder = objNode["Data"]["SubFolder"];
+    strCurrFolder     = aqConvert["VarToStr"](strCurrFolder);
+    if( strDestFolder == null ) strDestFolder = "No folder assigned";
+    if( strCurrFolder == strDestFolder )
+    {
+        
+        bReturn = true;
+        Log["Checkpoint"]("The destination folder "+ strDestFolder + " is correct.");   
+    }
+    else
+    {
+        bReturn = false;
+        Log["Error"]("The folder " + strCurrFolder + " is not the same as " + strDestFolder );
+    }
+    return bReturn;
+}
+
+//-------------------------------------------------------------------------------------
+//Function Name : GetDestFolderObject
+//Author        : Queena Liu
+//Create Date   : March 20 2014
+//Last Modify   : 
+//Description   : Find the TIC name under the folder strDestFolder
+//Parameter     : objTreelist     --> Treelist Object 
+//                strDestFolder   --> The destination folder   eg. datapublish/test
+//                strPublishName  --> the publish name      
+//Return        : objDestObj 
+//-------------------------------------------------------------------------------------
+function GetDestFolderObject(objTreelist, strDestFolder, strPublishName)
+{
+     if( strDestFolder == null || strDestFolder == "") strDestFolder = "No folder assigned";
+     
+     var arrDestFolder = strDestFolder["split"]("/");
+     try
+     {
+         BeginLogFolder(arguments);
+     
+         for(i in arrDestFolder)
+         {
+             var objDestFolder = FindTreeListObject(objTreelist,arrDestFolder[i]);
+             objDestFolder["Parent"]["Click"]();
+             objDestFolder["Parent"]["Expanded"] = true;  
+
+         } 
+         
+         objDestObj = FindTreeListObject(objTreelist,strPublishName);
+         if(objDestObj != null)
+         {
+            Log["Checkpoint"]("Find the object " + strPublishName + " under the folder " + strDestFolder);
+         }
+         else
+         {
+            Log["Error"]("Unable to find the object.");
+         }
+         return objDestObj;
+     }
+    catch(e)
+    {
+        Log["Error"](e["description"]);
+    }
+    finally
+    {
+        EndLogFolder();
+    }
+     
+}
+

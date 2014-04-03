@@ -1,0 +1,142 @@
+﻿///////////////////////////////////////////////////////////////////////////////////////
+//
+//  Unit Name     : CreateSybaseASEConnection
+//  Author        : Charon Xu(Charon.Xu@software.dell.com)
+//  Create Date   : 24th December, 2013
+//  Last Modify   : 
+//  Description   : Test Step -- Create a connection to Sybase ASE Server.
+//
+///////////////////////////////////////////////////////////////////////////////////////
+
+//USEUNIT TDPCommon
+//USEUNIT Variable
+//USEUNIT InitialEnv
+
+// variable
+var s_strFunctionPoint        = "CreateConnections"; // the name of function point name, use it for folder name. 
+var s_strTestConfig           = "CreateConnections.xls";
+
+// Column of excel
+var Host               = undefined;
+var UserName           = undefined;
+var Password           = undefined;
+var Database           = undefined;
+
+
+//-------------------------------------------------------------------------------------
+//Function Name : CreateSybaseASEConnection
+//Author        : Charon Xu(Charon.Xu@software.dell.com)
+//Create Date   : 24th December, 2013
+//Last Modify   : 
+//Description   : Main function of the current test case.
+//Parameter     : nID -- test case id, define in excel.
+//Return        : null
+//-------------------------------------------------------------------------------------
+function CreateSybaseASEConnection(nID)
+{
+    var strConfigFile     = g_strProjectTestConfig + "\\" + s_strFunctionPoint + "\\" + s_strTestConfig;
+    var strSheetName      = "CreateSybaseASEConnection"; // test step name, use it for sheet name
+    var objDict           = new ActiveXObject("Scripting.Dictionary");
+    var strConnectName    = "";
+    
+    var bResult           = false;
+                         
+    try
+    {
+        BeginLogFolder(arguments);
+        
+        InitialEnvMain();
+        ActivateMainWinForm();
+        Delay(1000);
+        //Get configuration from Excel
+        if(GetDataFromExcelByID(strConfigFile, strSheetName, nID, objDict))
+        {
+            Host                = objDict["Item"]("Host");
+            Username            = objDict["Item"]("UserName");
+            Password            = objDict["Item"]("Password");
+            Name                = objDict["Item"]("Name");
+            Database            = objDict["Item"]("Database");
+            
+            if(Name != undefined && Name != "")
+            {
+                strConnectName  = Name;
+            }
+            else
+            {
+                //for example 10.30.152.179 (sa), master
+                strConnectName  = "TDPDS_SYBASEASE";//Host + " (" + Username + "), " + Database;
+            }
+        }
+        
+        var frmConnection = Aliases["TDP_toad"]["frmMainForm"]["DockPanel"]
+                                ["ControlContainer"]["AnalystBrowserControl"]
+                                ["connectionManagerControl1"]["connectionControl1"];
+                                    
+        var objFind = frmConnection["connectionList"]["groupingDataPanel"]["Find"]("Value", strConnectName, 3);
+        if(objFind && objFind != undefined && objFind["Exists"])
+        {
+            Log["Message"]("The connection \"" + strConnectName + "\" is exists!");
+            Reconnect(strConnectName);
+        }
+        else
+        {
+            Log["Message"]("The connection \"" + strConnectName + "\" does not exists. Waiting to Create...");
+            
+            frmConnection["BarDockControl"]["DockedBarControl"]["btnCreate"]["ClickButton"]();
+            var pnlProviderTop = Aliases["TDP_toad"]["frmConnectionProperties"]["pnlConnectionProperties"]
+                                ["pnlProviderTop"];
+            
+            WaitingForObjectWithTime(pnlProviderTop["groupSelectionControl1"], 15);
+            if(pnlProviderTop["groupSelectionControl1"])
+            {
+                //pnlProviderTop["groupSelectionControl1"]["Click"](96, 6);
+                Sys["Keys"]("Sybase ASE");
+                Sys["Keys"]('[Enter]');
+                
+                var objLogin = Aliases["TDP_toad"]["frmConnectionProperties"]
+                              ["pnlConnectionProperties"]["pnlControl"]
+                              ["pnlSybaseConnection"]["xtraTabControlAdvanced"]["xtabpageLogin"];
+                              
+                objLogin["tetHost"]["tbxMaskBox"]["SetText"](Host);
+                objLogin["tetUser"]["tbxMaskBox"]["SetText"](Username);
+                objLogin["tetPassword"]["tbxMaskBox"]["SetText"](Password);
+                objLogin["cbxSchema"]["tbxMaskBox"]["SetText"](Database);
+                
+                var pnlProviderBtm = Aliases["TDP_toad"]["frmConnectionProperties"]["pnlConnectionProperties"]
+                                    ["pnlProviderBottom"];
+                if(strConnectName != undefined && strConnectName != "")
+                {
+                    pnlProviderBtm["btneName"]["tbxMaskBox"]["SetText"](strConnectName);
+                }
+                //Save password for reconnection.
+                pnlProviderBtm["cbxSavePassword"]["ClickButton"](cbChecked);
+                Aliases["TDP_toad"]["frmConnectionProperties"]["btnConnect"]["ClickButton"]();
+            }
+            
+            if(Aliases["TDP_toad"]["frmMainForm"]["WaitProperty"]('CanFocus', true, 25000) == true)
+            {
+                Log["Message"]("Success!");
+            }
+            else
+            {   
+                Log["Error"]("Unexpected Dialog to process! Please check it.");
+            }
+        }
+    }
+    catch(e)
+    {
+        Log["Error"](e.description);
+    }
+    finally
+    {
+        EndLogFolder();
+    }
+}
+
+ //Main function for test.
+ //This function is only for DEBUG. DO NOT set it in the test group!!!
+function Main()
+{
+    var nID     = 1; //1, 2
+    CreateSybaseASEConnection(nID);
+}

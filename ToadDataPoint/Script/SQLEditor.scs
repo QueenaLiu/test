@@ -1,0 +1,320 @@
+﻿///////////////////////////////////////////////////////////////////////////////////////
+//
+//  Unit Name     : SQLEditor
+//  Author        : Roy T.Burns(Royburns.Peng@software.dell.com)
+//  Create Date   : Oct 10, 2013
+//  Last Modify   : 
+//  Description   : Test Step -- Run SQL(String or File) in SQL Editor.
+//
+//    All rights reserved by TDP Team.
+//
+///////////////////////////////////////////////////////////////////////////////////////
+
+//USEUNIT Common
+//USEUNIT TDPCommon
+//USEUNIT Variable
+//USEUNIT InitialEnv
+//USEUNIT ExcelOperator
+
+// variable
+var s_strFunctionPoint        = "SQLEditor"; // the name of function point name, use it for folder name. 
+var s_strTestConfig           = "SQLEditor.xls";
+
+// Column of excel
+var nSQLType                  = undefined;// 0 -- SQL String; 1 -- SQL File
+var SQL                       = undefined;
+var Comment                   = undefined;
+
+//-------------------------------------------------------------------------------------
+//Function Name : SQLEditor
+//Author        : Roy T.Burns
+//Create Date   : Oct 10, 2013
+//Last Modify   : 
+//Description   : Main function of the current test step.
+//Parameter     : nID -- test case id, define in excel.
+//Return        : null
+//-------------------------------------------------------------------------------------
+function SQLEditor(nID)
+{
+    var strConfigFile     = g_strProjectTestConfig + "\\" + s_strFunctionPoint + "\\" + s_strTestConfig;
+    var strSheetName      = "SQLEditor"; // test step name, use it for sheet name
+    var objDict           = new ActiveXObject("Scripting.Dictionary");
+    var strTemplateFile   = undefined;
+    var objConn           = undefined;
+    var strSQL            = "";
+    
+    var bResult           = false;
+    
+    try
+    {
+        BeginLogFolder(arguments);
+        
+        InitialEnvMain();
+        ActivateMainWinForm();
+        Delay(1000);
+        
+        //Get configuration from Excel
+        if (GetDataFromExcelByID(strConfigFile, strSheetName, nID, objDict))
+        {
+            nSQLType            = objDict["Item"]("nSQLType");
+            SQL                 = objDict["Item"]("SQL");
+            Comment             = objDict["Item"]("Comment");
+        }
+        
+        Log["Message"](SQL);
+        switch(nSQLType)
+        {
+            case 0:
+                strSQL = SQL;
+                RunSQLString(strSQL);
+                break;
+            case 1:
+                var strSQLFileName = g_strProjectTestData + "\\" + s_strFunctionPoint + "\\" + SQL;
+                Log["Message"](strSQLFileName);
+                
+                strSQL = aqFile["ReadWholeTextFile"](strSQLFileName, aqFile["ctUTF8"]);
+                //RunSQLFile(strSQLFileName);
+                RunSQLString(strSQL);
+                break;
+            default:
+                Log["Error"]("The SQL type is error, please check the test data!");
+                break;
+        }
+    }
+    catch(e)
+    {
+        Log["Error"](e.description);
+    }
+    finally
+    {
+        EndLogFolder();
+    }
+}
+
+//-------------------------------------------------------------------------------------
+//Function Name : RunSQLString
+//Author        : Roy T.Burns
+//Create Date   : Oct 10, 2013
+//Last Modify   : 
+//Description   : Run sql string.
+//Parameter     : nIDorSQL -- The sql string(or a sql ID), which to be execute, define in excel.
+//Return        : null
+//-------------------------------------------------------------------------------------
+function RunSQLString(strSQL)
+{
+    var bResult = false;
+    
+    try
+    {
+        BeginLogFolder(arguments);
+        
+        //Aliases["TDP_toad"]["frmMainForm"]["BarDockControl"]["DockedBarControl"]
+        //    ["ClickItem"]("Tools|Editor|[0]|SQL Editor");
+        var menuBar = Aliases["TDP_toad"]["frmMainForm"]["BarDockControl"]["DockedBarControl"];
+        menuBar["ClickItem"]('Tools');
+        SendKeys(['[Down]', '[Enter]'],[1, 1]);
+        
+        Delay(3000);
+        Aliases["RefreshMappingInfo"]();
+        /*Aliases["TDP_toad"]["frmMainForm"]["MdiClient"]
+            ["frmMdiDocEditor"]["EditorForm"]["WinFormsObject"]("ToolWindowContainer", "", 1)
+            ["WinFormsObject"]("toolEditor")["WinFormsObject"]("editorControl")
+            ["WinFormsObject"]("syntaxEditor")["Text"] = strSQL;*/
+        Aliases["TDP_toad"]["frmMainForm"]["MdiClient"]["frmMdiDocEditor"]["EditorForm"]
+            ["ToolWindowContainer"]["toolEditor"]["editorControl"]["syntaxEditor"]["Text"] = strSQL;
+        
+        //Aliases["TDP_toad"]["frmMainForm"]["BarDockControl"]["DockedBarControl"]["ClickItem"]("Editor|Execute SQL");
+        menuBar["ClickItem"]('Editor');
+        SendKeys(['[Down]', '[Enter]'],[1, 1]);
+        
+        WaitingForObjectWithTime(Aliases["TDP_toad"]["frmBaseModal"], 5);
+        if(Aliases["TDP_toad"]["frmBaseModal"]["Exists"])
+        {
+            if(Aliases["TDP_toad"]["frmBaseModal"]["frmConfirmation"]["lblMessage"] == "SQL Server Database Error")
+            {
+                throw new Error("SQL Server Database Error");
+            }
+            
+            //WaitingForObjectWithTime(Aliases["TDP_toad"]["frmBaseModal"]["frmConfirmation"]["pnlButton"]["btnYes"], 3);
+            if(Aliases["TDP_toad"]["frmBaseModal"]["frmConfirmation"]["pnlButton"]["btnYes"]["Exists"])
+            {
+                Aliases["TDP_toad"]["frmBaseModal"]["frmConfirmation"]["pnlButton"]["btnYes"]["ClickButton"]();
+            }
+        }
+        
+        bResult = true;
+    }
+    catch(e)
+    {
+        Log["Error"](e.description);
+        bResult = false;
+    }
+    finally
+    {
+        // Close the editor
+        Sys["Keys"]("^[F4]");
+        WaitingForObjectWithTime(Aliases["TDP_toad"]["frmBaseModal"], 3);
+        if(Aliases["TDP_toad"]["frmBaseModal"]["Exists"])
+        {
+
+            ButtonClickWithDelay(Aliases["TDP_toad"]["frmBaseModal"]["frmConfirmation"]["pnlButton"]["btnNo"], 3);
+
+        }
+        
+        EndLogFolder();
+        return bResult;
+    }
+}
+
+//-------------------------------------------------------------------------------------
+//Function Name : RunSQLFile
+//Author        : Roy T.Burns
+//Create Date   : Oct 10, 2013
+//Last Modify   : 
+//Description   : Run sql file.
+//Parameter     : strFileName -- The sql file, which to be execute.
+//Return        : null
+//-------------------------------------------------------------------------------------
+function RunSQLFile(strFileName)
+{
+    var strSQL    = undefined;
+    var bResult   = false;
+    
+    try
+    {
+        BeginLogFolder(arguments);
+        
+        //Get SQL from file
+        if(aqFileSystem["Exists"](strFileName))
+        {
+            strSQL = aqFile["ReadWholeTextFile"](strFileName, aqFile["ctUTF8"]);
+        }
+        else
+        {
+            Log["Error"]("SQL file is not exists! FileName: " + strFileName);
+        }
+        
+        //Aliases["TDP_toad"]["frmMainForm"]["BarDockControl"]["DockedBarControl"]["ClickItem"]("Tools|Editor|[0]|SQL Editor");
+        var menuBar = Aliases["TDP_toad"]["frmMainForm"]["BarDockControl"]["DockedBarControl"];
+        menuBar["ClickItem"]('Tools');
+        SendKeys(['[Down]', '[Enter]'],[1, 1]);
+        
+        Delay(3000);
+        Aliases["RefreshMappingInfo"]();
+        //Aliases["TDP_toad"]["frmMainForm"]["MdiClient"]["frmMdiDocEditor"]["EditorForm"]["DockContainerContainer"]["ToolWindowContainer"]["toolEditor"]["editorControl"]["syntaxEditor"]["Text"] = strSQL;//  ["Keys"](strSQL);
+        Aliases["TDP_toad"]["frmMainForm"]["MdiClient"]["frmMdiDocEditor"]["EditorForm"]["WinFormsObject"]("ToolWindowContainer", "", 1)["WinFormsObject"]("toolEditor")["WinFormsObject"]("editorControl")["WinFormsObject"]("syntaxEditor")["Text"] = strSQL;
+        //Aliases["TDP_toad"]["frmMainForm"]["BarDockControl"]["DockedBarControl"]["ClickItem"]("Editor|Execute SQL");
+        menuBar["ClickItem"]('Editor');
+        SendKeys(['[Down]', '[Enter]'],[1, 1]);
+        
+
+        WaitingForObjectWithTime(Aliases["TDP_toad"]["frmBaseModal"], 3);
+        if(Aliases["TDP_toad"]["frmBaseModal"]["Exists"])
+        {
+            ButtonClickWithDelay(Aliases["TDP_toad"]["frmBaseModal"]["frmConfirmation"]["pnlButton"]["btnYes"], 3);
+        }
+        
+        bResult = true;
+    }
+    catch(e)
+    {
+        Log["Error"](e.description);
+        bResult = false;
+    }
+    finally
+    {
+        // Close the editor
+        Sys["Keys"]("^[F4]");
+        WaitingForObjectWithTime(Aliases["TDP_toad"]["frmBaseModal"], 3);
+        if(Aliases["TDP_toad"]["frmBaseModal"]["Exists"])
+
+        {
+            ButtonClickWithDelay(Aliases["TDP_toad"]["frmBaseModal"]["frmConfirmation"]["pnlButton"]["btnNo"], 3);
+        }
+        EndLogFolder();
+        return bResult;
+    }
+}
+
+//-------------------------------------------------------------------------------------
+//Function Name : RunSQLByIDorSQL
+//Author        : Hugo He
+//Create Date   : Oct 10, 2013
+//Last Modify   : 
+//Description   : Run SQL script by nID or SQL
+//Parameter     : nID in Excel or SQL script
+//Return        : boolean
+//-------------------------------------------------------------------------------------
+function RunSQLByIDorSQL(nIDorSQL)
+{
+    var strConfigFile = '';
+    var strSheetName  = "RunSQL";
+    var objDict       = new ActiveXObject("Scripting.Dictionary");
+    var strSQL        = '';
+    var menuBar       = null;
+    var bResult       = false;
+
+    //Initial Env
+    strConfigFile = ConfigFile;
+    
+    try
+    {
+        BeginLogFolder(arguments);
+        
+        menuBar = Aliases["TDP_toad"]["frmMainForm"]["BarDockControl"]["DockedBarControl"];
+//        menuBar["ClickItem"]("Tools|Editor|[0]|SQL Editor");   //one level extra.. faint!
+        menuBar["ClickItem"]('Tools');
+        SendKeys(['[Down]', '[Enter]'],[1, 1]);
+
+        //Get configuration from Excel
+        if(typeof(nIDorSQL) == "number")
+        {
+            if( GetDataFromExcelByID(strConfigFile, strSheetName, nIDorSQL, objDict))
+            {
+                strSQL = objDict["Item"]('SQL');
+            }
+            else
+            {
+                throw new Error('Fail to read Excel data.');
+            }
+        }
+        else
+        {
+            strSQL = nIDorSQL;
+        }
+    
+        Delay(3000);
+        Aliases["RefreshMappingInfo"]();
+        Aliases["TDP_toad"]["frmMainForm"]["MdiClient"]["frmMdiDocEditor"]["EditorForm"]
+            ["ToolWindowContainer"]["toolEditor"]["editorControl"]["syntaxEditor"]["Text"] = strSQL;
+        menuBar["ClickItem"]('Editor');
+        SendKeys(['[Down]', '[Enter]'],[1, 1]);
+        
+        WaitingForObjectWithTime(Aliases["TDP_toad"]["frmBaseModal"], 3);
+        if(Aliases["TDP_toad"]["frmBaseModal"]["Exists"])
+        {
+            Aliases["TDP_toad"]["frmBaseModal"]["frmConfirmation"]["pnlButton"]["btnYes"]["ClickButton"]();
+        }
+        
+        bResult = true;
+    }
+    catch(e)
+    {
+        Log["Error"](e["description"]);
+        bResult = false;
+    }
+    finally
+    {
+        EndLogFolder();
+    }
+    return bResult;
+}
+
+// Main function for test.
+/* This function is only for DEBUG. DO NOT set it in the test group!!!
+function Main()
+{
+    var nID     = 2; //1, 2
+    SQLEditor(nID);
+}
+//*/

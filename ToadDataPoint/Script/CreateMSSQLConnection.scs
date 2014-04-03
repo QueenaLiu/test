@@ -1,0 +1,156 @@
+﻿///////////////////////////////////////////////////////////////////////////////////////
+//
+//  Unit Name     : CreateMSSQLConnection
+//  Author        : Roy T.Burns(Royburns.Peng@software.dell.com)
+//  Create Date   : July 25, 2013
+//  Last Modify   : 
+//  Description   : Test Step -- Create a connection to MS SQL Server.
+//
+//    All rights reserved by TDP Team.
+//
+///////////////////////////////////////////////////////////////////////////////////////
+
+//USEUNIT TDPCommon
+//USEUNIT Variable
+//USEUNIT InitialEnv
+
+// variable
+var s_strFunctionPoint        = "CreateConnections"; // the name of function point name, use it for folder name. 
+var s_strTestConfig           = "CreateConnections.xls";
+
+// Column of excel
+var DataSource                = undefined;
+var InstanceName              = undefined;
+var DatabaseName              = undefined;
+var Username                  = undefined;
+var Password                  = undefined;
+var Name                      = undefined;
+var Comment                   = undefined;
+
+//-------------------------------------------------------------------------------------
+//Function Name : CreateMSSQLConnection
+//Author        : Roy T.Burns
+//Create Date   : July 25, 2013
+//Last Modify   : 
+//Description   : Main function of the current test case.
+//Parameter     : nID -- test case id, define in excel.
+//Return        : null
+//-------------------------------------------------------------------------------------
+function CreateMSSQLConnection(nID)
+{   
+    var strConfigFile     = g_strProjectTestConfig + "\\" + s_strFunctionPoint + "\\" + s_strTestConfig;
+    var strSheetName      = "CreateMSSQLConnection"; // test step name, use it for sheet name
+    var objDict           = new ActiveXObject("Scripting.Dictionary");
+    var strConnectName    = "";
+    
+    var bResult           = false;
+                         
+    try
+    {
+        BeginLogFolder(arguments);
+        
+        InitialEnvMain();
+        ActivateMainWinForm();
+        Delay(1000);
+        //Get configuration from Excel
+        if(GetDataFromExcelByID(strConfigFile, strSheetName, nID, objDict))
+        {
+            DataSource          = objDict["Item"]("DataSource");
+            InstanceName        = objDict["Item"]("InstanceName");
+            DatabaseName        = objDict["Item"]("DatabaseName");
+            Username            = objDict["Item"]("Username");
+            Password            = objDict["Item"]("Password");
+            Name                = objDict["Item"]("Name");
+            Comment             = objDict["Item"]("Comment");
+            
+            if(Name != undefined && Name != "")
+            {
+                strConnectName  = Name;
+            }
+            else
+            {
+                //zhuw2k8spl002\splsql2008ins1 (sa), TIC_test
+                strConnectName  = InstanceName + " (" + Username + "), " + DatabaseName;
+            }
+        }
+        
+        var frmConnection = Aliases["TDP_toad"]["frmMainForm"]["DockPanel"]
+                                ["ControlContainer"]["AnalystBrowserControl"]
+                                ["connectionManagerControl1"]["connectionControl1"];
+                                    
+        var objFind = frmConnection["connectionList"]["groupingDataPanel"]["Find"]("Value", strConnectName, 3);
+        if(objFind && objFind != undefined && objFind["Exists"])
+        {
+            Log["Message"]("The connection \"" + strConnectName + "\" is exists!");
+            //objFind["DblClick"]();
+            Reconnect(strConnectName);
+        }
+        else
+        {
+            Log["Message"]("The connection \"" + strConnectName + "\" is not exists. Waiting to connect...");
+            
+            frmConnection["BarDockControl"]["DockedBarControl"]["btnCreate"]["ClickButton"]();
+            var pnlProviderTop = Aliases["TDP_toad"]["frmConnectionProperties"]["pnlConnectionProperties"]
+                                ["providerTopPanel"];
+            
+            WaitingForObjectWithTime(pnlProviderTop["groupSelectionControl1"], 15);
+            if(pnlProviderTop["groupSelectionControl1"])
+            {
+                //pnlProviderTop["groupSelectionControl1"]["Click"](96, 6);
+                //ClickTreeListItem(Aliases["TDP_toad"]["PopupContainerForm"]["PopupContainerControl"]["groupTree"], "Value", "SQL Server", 5);
+                Sys["Keys"]("SQL Server");
+                Sys["Keys"]('[Enter]');
+                
+                var objLogin = Aliases["TDP_toad"]["frmConnectionProperties"]
+                              ["pnlConnectionProperties"]["pnlControl"]
+                              ["pnlSqlServerConnection"]["xtraTabControlAdvanced"]
+                              ["xtabpageLogin"];
+                              
+                objLogin["btneServerName"]["tbxMaskBox"]["SetText"](InstanceName);
+                objLogin["cbxEditAuthentication"]["Keys"]("SQL Server Authentication");
+                objLogin["tetLogin"]["tbxMaskBox"]["SetText"](Username);
+                objLogin["tetPassword"]["tbxMaskBox"]["SetText"](Password);
+                objLogin["cbeDatabase"]["tbxMaskBox"]["SetText"](DatabaseName);
+                
+                var pnlProviderBtm = Aliases["TDP_toad"]["frmConnectionProperties"]["pnlConnectionProperties"]
+                                    ["pnlProviderBottom"];
+                if(strConnectName != undefined && strConnectName != "")
+                {
+                    pnlProviderBtm["btneName"]["tbxMaskBox"]["SetText"](strConnectName);
+                }
+                pnlProviderBtm["cbxSavePassword"]["ClickButton"](cbChecked);
+                Aliases["TDP_toad"]["frmConnectionProperties"]["btnConnect"]["ClickButton"]();
+            }
+            
+            if(Aliases["TDP_toad"]["frmMainForm"]["WaitProperty"]('CanFocus', true, 25000) == true)
+            {
+                Log["Message"]("Success!");
+            }
+            else
+            {
+                //Log["Message"]("Have something Unexpected Dialog to process!");
+                //...
+                
+                Log["Error"]("Unexpected Dialog to process! Please check it.");
+            }
+        }
+    }
+    catch(e)
+    {
+        Log["Error"](e.description);
+        //Runner["Stop"]();
+    }
+    finally
+    {
+        EndLogFolder();
+    }
+}
+
+// Main function for test.
+//* This function is only for DEBUG. DO NOT set it in the test group!!!
+function Main()
+{
+    var nID     = 4; //1, 2
+    CreateMSSQLConnection(nID);
+}
+//*/

@@ -1,0 +1,89 @@
+﻿///////////////////////////////////////////////////////////////////////////////////////
+//
+//  Unit Name     : _Script_Template__
+//  Author        : Roy T.Burns(Royburns.Peng@software.dell.com)
+//  Create Date   : Dec 12, 2013
+//  Last Modify   : 
+//  Description   : Test Step -- A Template file for writing scripts.
+//
+//    All rights reserved by TDP Team.
+//
+///////////////////////////////////////////////////////////////////////////////////////
+
+// References of other modules
+//USEUNIT TDPCommon
+//USEUNIT Variable
+//USEUNIT InitialEnv
+
+// variable
+var s_strFunctionPoint        = "General"; // the name of function point name, use it for folder name. 
+var s_strTestConfig           = "General.xls";
+
+// Column of excel
+var Column1                   = undefined;
+var Column2                   = undefined;
+var TestDataFile              = undefined;
+var Comment                   = undefined;
+
+//-------------------------------------------------------------------------------------
+//Function Name : _Script_Template__
+//Author        : Roy T.Burns
+//Create Date   : Dec 12, 2013
+//Last Modify   : 
+//Description   : The advanced version of ImportData.
+//Parameter     : nID -- test case id, define in excel.
+//Return        : null
+//-------------------------------------------------------------------------------------
+function _Script_Template__(nID)
+{
+    // Initialization
+    InitialEnvMain();
+    //ActivateMainWinForm();
+    Delay(1000);
+    
+    
+    var strConfigFile         = g_strProjectTestConfig + "\\" + s_strFunctionPoint + "\\" + s_strTestConfig;
+    var strSheetName          = "_Script_Template__"; // test step name, use it for sheet name
+    var objDict               = new ActiveXObject("Scripting.Dictionary");
+    var strTestDataFilePath   = undefined;
+    
+    var bResult               = false;
+    
+    try
+    {
+        // Get configuration from Excel
+        if (GetDataFromExcelByID(strConfigFile, strSheetName, nID, objDict))
+        {
+            Column1         = objDict["Item"]("Column1");
+            Column2         = objDict["Item"]("Column2");
+            TestDataFile    = objDict["Item"]("TestDataFile");
+            Comment         = objDict["Item"]("Comment");
+            
+            // If have test data, compose them here
+            strTestDataFilePath   = g_strProjectTestData + "\\" + s_strFunctionPoint + "\\" + TestDataFile;
+        }
+        
+        // Do the test
+        //...
+        
+        bResult = true;
+    }
+    catch(e)
+    {
+        Log["Error"](e.description);
+        bResult = false;
+    }
+    finally
+    {
+        return bResult;
+    }
+}
+
+// Main function for test.
+/* This function is only for DEBUG. DO NOT set it in the test group!!!
+function Main()
+{
+    var nID     = 1;
+    _Script_Template__(nID);
+}
+//*/

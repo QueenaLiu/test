@@ -1,0 +1,103 @@
+﻿///////////////////////////////////////////////////////////////////////////////////////
+//
+//  Unit Name     : EditTemplate
+//  Author        : Roy T.Burns(Royburns.Peng@software.dell.com)
+//  Create Date   : Oct 10, 2013
+//  Last Modify   : 
+//  Description   : Test Step -- .
+//
+//    All rights reserved by TDP Team.
+//
+///////////////////////////////////////////////////////////////////////////////////////
+
+//USEUNIT Common
+//USEUNIT TDPCommon
+//USEUNIT Variable
+
+var s_strFunctionPoint  = 'Export';
+
+//-------------------------------------------------------------------------------------
+//Function Name : EditTemplate
+//Author        : Hugo He
+//Create Date   : July 25, 2013
+//Last Modify   : 
+//Description   : Main Function, export SQL result after execute SQL script
+//Parameter     : strConnName       ->  Connection name
+//                strTemplateFile   ->  Template file
+//                strNewFileName    ->  New output file name
+//Return        : Boolean
+//-------------------------------------------------------------------------------------
+function EditTemplate(strConnName, strTemplateFile, strNewFileName)
+{
+    var bReturn         = true;
+    //Controls
+    var objConn, menuBar, ckHeaderRow;
+
+    try
+    {
+        BeginLogFolder(arguments);
+        //Check and enable connection
+        objConn = GetConnection(strConnName);
+        if (! objConn["Exists"])
+        {
+            throw new Error('Connection does not exist!');
+        }
+        else
+        {
+            Reconnect(strConnName);
+            Delay(5000);
+        }
+    
+        //Launch Export Wizard
+        menuBar = Aliases["TDP_toad"]["frmMainForm"]["BarDockControl"]["DockedBarControl"];
+        menuBar["ClickItem"]('Tools');
+        SendKeys(['[Down]', '[Enter]', '[Down]', '[Enter]'], [7, 1, 1, 1]);        
+        //Select template
+        Aliases["TDP_toad"]["dlgOpenExportTemplateFile"]["pnlFileName"]["cbxFileName"]["SetText"](strTemplateFile);
+        Aliases["TDP_toad"]["dlgOpenExportTemplateFile"]["Open"]["Click"]();
+
+        //Click Next
+        ButtonClickWithDelay(Aliases["TDP_toad"]["ExportWizard"]["wizardExport"]["pnlButtons"]["btnNext"], 3);
+        //Click Edit button
+        ButtonClickWithDelay(Aliases["TDP_toad"]["ExportWizard"]["wizardExport"]["wpgAddExport"]
+                              ["pnlExportObjectsList"]["WinFormsObject"]("simpleButtonEditExport"), 3);
+        //Click Next to skip select object
+        ButtonClickWithDelay(Aliases["TDP_toad"]["ExportWizard"]["wizardExport"]["pnlButtons"]["btnNext"], 3);
+        
+        //Select CSV to output, the only thing changed
+        Aliases["TDP_toad"]["ExportWizard"]["wizardExport"]["wpgFileFormat"]["gctrlFileFormat"]["cbxFileFormat"]["Keys"]('Comma Separated Values');
+        ckHeaderRow = Aliases["TDP_toad"]["ExportWizard"]["wizardExport"]["wpgFileFormat"]["gctrlFileFormat"]["ceHeaderRow"];
+        if(ckHeaderRow["Exists"] && ckHeaderRow["Enabled"])
+        {
+            ckHeaderRow["Checked"] = true;
+        }
+        
+        Aliases["TDP_toad"]["ExportWizard"]["wizardExport"]["pnlButtons"]["btnNext"]["Click"]();
+        
+        //Skip other options
+        Aliases["TDP_toad"]["ExportWizard"]["wizardExport"]["pnlButtons"]["btnNext"]["Click"]();
+        
+        //Set new output file name
+        Aliases["TDP_toad"]["ExportWizard"]["wizardExport"]["wpgFileLocation"]["btneFolderFileName"]
+            ["tbxMaskBox"]["SetText"](strNewFileName);
+        Aliases["TDP_toad"]["ExportWizard"]["wizardExport"]["wpgFileLocation"]
+            ["pnlOutput"]["gctrlExistingFile"]["ceFileOverwrite"]["Checked"] = true;
+        Aliases["TDP_toad"]["ExportWizard"]["wizardExport"]["pnlButtons"]["btnNext"]["Click"]();
+        
+        Aliases["TDP_toad"]["ExportWizard"]["wizardExport"]["pnlButtons"]["btnNext"]["Click"]();
+        //Finish Edit
+        Aliases["TDP_toad"]["ExportWizard"]["wizardExport"]["pnlButtons"]["btnNext"]["Click"]();
+    }
+    catch(e)
+    {
+        bReturn = false;
+        Log["Error"](e["description"]);
+        throw e;
+    }
+    finally
+    {
+        EndLogFolder();
+    }
+    return bReturn;
+}
+

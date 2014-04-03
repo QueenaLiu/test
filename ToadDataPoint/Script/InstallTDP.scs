@@ -1,0 +1,137 @@
+﻿///////////////////////////////////////////////////////////////////////////////////////
+//
+//  Unit Name     : InstallTDP
+//  Author        : Roy T.Burns(Royburns.Peng@software.dell.com)
+//  Create Date   : July 25, 2013
+//  Last Modify   : 
+//  Description   : Test Step -- Install the TDP.
+//
+//    All rights reserved by TDP Team.
+//
+///////////////////////////////////////////////////////////////////////////////////////
+
+//USEUNIT Common
+//USEUNIT TDPCommon
+//USEUNIT Variable
+//USEUNIT InitialEnv
+//USEUNIT ExcelOperator
+
+// variable
+var s_strFunctionPoint        = "Basic"; // the name of function point name, use it for folder name. 
+var s_strTestConfig           = "Basic.xls";
+
+// Column of excel
+var InstallFolder             = undefined;
+var User                      = undefined;
+var Comment                   = undefined;
+
+//-------------------------------------------------------------------------------------
+//Function Name : InstallTDP
+//Author        : Roy T.Burns
+//Create Date   : July 25, 2013
+//Last Modify   : 
+//Description   : Main function of the current test case.
+//Parameter     : nID -- test case, config it in the excel.
+//Return        : null
+//-------------------------------------------------------------------------------------
+function InstallTDP(nID)
+{
+    try
+    {
+        BeginLogFolder(arguments);
+    
+        InitialEnvMain();
+        //ActivateMainWinForm();
+        Delay(1000);
+    
+        var strConfigFile     = g_strProjectTestConfig + "\\" + s_strFunctionPoint + "\\" + s_strTestConfig;
+        var strSheetName      = "InstallTDP";
+        var objDict           = new ActiveXObject("Scripting.Dictionary");
+        var strPath           = ProjectSuite["Path"];
+        //var strPath           = "C:\\Automation";
+        var strFileName       = "";
+    
+        if(!nID || nID == 0)
+        {
+            Log["Error"]("nID is invalid.");
+            Runner["Stop"]();
+        }
+    
+        if(Sys["OSInfo"]["Windows64bit"])
+                nID = nID;
+            else
+                nID = nID + 1;
+    
+        InitialInstall(TDPProcessName);
+
+        strFileName = SearchFile(strPath, TDPInstallerPattern);
+        if(strFileName == undefined || strFileName == "")
+            throw new Error("The installer does not exist.");
+        
+        if(GetDataFromExcelByID(strConfigFile, strSheetName, nID, objDict))
+        {
+            InstallFolder     = objDict["Item"]("InstallFolder");
+            User              = objDict["Item"]("User");
+            Comment           = objDict["Item"]("Comment");
+        }
+        LaunchApplication(strPath, strFileName);
+        
+        WaitingForObject(Aliases["TDPSetup"]["mdTDPSetup"]["btnInstallNext"]);
+        
+        //Aliases["TDPSetup"]["mdTDPSetup"]["btnInstallNext"]["ClickButton"]();
+        ButtonClickWithDelay(Aliases["TDPSetup"]["mdTDPSetup"]["btnInstallNext"], 2);
+        //Aliases["TDPSetup"]["mdTDPSetup"]["btnInstallNext"]["ClickButton"]();
+        ButtonClickWithDelay(Aliases["TDPSetup"]["mdTDPSetup"]["btnInstallNext"], 2);
+        
+        //License agreement
+        WaitingForObject(Aliases["TDPSetup"]["mdTDPSetup"]["btnAggreementSelectGroup"]["btnAccept"]);
+        Aliases["TDPSetup"]["mdTDPSetup"]["btnAggreementSelectGroup"]["btnAccept"]["ClickButton"]();
+        //Aliases["TDPSetup"]["mdTDPSetup"]["btnInstallNext"]["ClickButton"]();
+        ButtonClickWithDelay(Aliases["TDPSetup"]["mdTDPSetup"]["btnInstallNext"], 2);
+        //Aliases["TDPSetup"]["mdTDPSetup"]["btnInstallNext"]["ClickButton"]();
+        ButtonClickWithDelay(Aliases["TDPSetup"]["mdTDPSetup"]["btnInstallNext"], 2);
+        
+        //Install path
+        // TODO:
+        //Aliases["TDPSetup"]["mdTDPSetup"]["btnBrowse"]["ClickButton"]();
+        //WaitingForObject(Aliases["TDPSetup"]["mdTDPSetup"]["reTDPInstallationPath"]);
+        //Aliases["TDPSetup"]["mdTDPSetup"]["reTDPInstallationPath"]["SetText"](objDict.Item("InstallFolder"));
+        //Aliases["TDPSetup"]["mdTDPSetup"]["btnOK"]["ClickButton"]();
+        //Aliases["TDPSetup"]["mdTDPSetup"]["btnInstallNext"]["ClickButton"]();
+        ButtonClickWithDelay(Aliases["TDPSetup"]["mdTDPSetup"]["btnInstallNext"], 2);
+        
+        //Install type
+        // TODO:
+        //Aliases["TDPSetup"]["mdTDPSetup"]["btnInstallNext"]["ClickButton"]();
+        ButtonClickWithDelay(Aliases["TDPSetup"]["mdTDPSetup"]["btnInstallNext"], 2);
+        
+        //Register File Extensions
+        // TODO:
+        //Aliases["TDPSetup"]["mdTDPSetup"]["btnInstallNext"]["ClickButton"]();
+        ButtonClickWithDelay(Aliases["TDPSetup"]["mdTDPSetup"]["btnInstallNext"], 2);
+        
+        //Waiting for installation.
+        WaitingForObject(Aliases["TDPSetup"]["mdTDPSetup"]["btnFinish"]);
+        Aliases["TDPSetup"]["mdTDPSetup"]["Launch_Release_Notes_"]["ClickButton"](cbUnchecked);
+        Aliases["TDPSetup"]["mdTDPSetup"]["Start_Toad_when_installation_completes_"]["ClickButton"](cbUnchecked);
+        Aliases["TDPSetup"]["mdTDPSetup"]["btnFinish"]["ClickButton"]();
+    }
+    catch(e)
+    {
+        Log["Error"](e.description);
+        Runner["Stop"]();
+    }
+    finally
+    {
+        EndLogFolder();
+    }
+}
+
+// Main function for test.
+/* This function is only for DEBUG. DO NOT set it in the test group!!!
+function Main()
+{
+    var nID     = 3; //3, 4, 5, 6
+    InstallTDP(nID);
+}
+//*/

@@ -1,0 +1,131 @@
+﻿//USEUNIT InitialEnv
+//USEUNIT Common
+//USEUNIT TDPCommon
+//USEUNIT Variable
+//USEUNIT Publish
+
+var s_strFunctionPoint  = 'Publish';
+var s_strTestConfig     = 'Publish.xls'
+
+//-------------------------------------------------------------------------------------
+//Function Name : PublishObjects
+//Author        : Hugo He
+//Create Date   : Jan 16th, 2014
+//Last Modify   : 
+//Description   : Main Function, publish objects from Object Explorer to TIC
+//Parameter     : nID   ->  data ID in Excel
+//Return        : boolean
+//-------------------------------------------------------------------------------------
+function PublishObjects(nID)
+{
+    var strConfigFile = g_strProjectTestConfig + "\\" + s_strFunctionPoint + "\\" + s_strTestConfig;
+    var strSheetName  = 'PublishObjects';
+    
+    //Data in Excel
+    var ticConnName, dataSource, srcConnName, objectType, databaseName, objectName;
+
+    //Control variant
+    var objTICConn, publishObject;
+    
+    //other variant
+    var objDict = new ActiveXObject('Scripting.Dictionary');
+    var bReturn = true;
+    
+    try
+    {
+        BeginLogFolder(arguments);
+        
+        InitialEnvMain();
+        ActivateMainWinForm();
+        Delay(1000);
+    
+        //Get configuration from Excel
+        if (GetDataFromExcelByID(strConfigFile, strSheetName, nID, objDict))
+        {
+            ticConnName       =  objDict["Item"]("TICConnName");
+            dataSource        =  objDict["Item"]("DataSource");
+            srcConnName       =  objDict["Item"]("SrcConnName");
+            objectType        =  objDict["Item"]("ObjectType");
+            databaseName      =  objDict["Item"]("DatabaseName");
+            objectName        =  objDict["Item"]("ObjectName");
+        }
+         else
+        {
+            throw new Error('Fail to read Excel data.');
+        }
+        
+        //Check TIC connection exists
+        objTICConn = GetConnection(ticConnName);
+        if (! objTICConn["Exists"])
+        {
+            throw new Error('TIC connection "'+ticConnName+'" does not exist!');
+        }
+        else
+        {
+            Reconnect(ticConnName);
+            Delay(3000);
+        }
+
+        //Select object to publish
+        switch (aqString["ToUpper"](dataSource))
+        {
+            case 'ORACLE':
+            case 'SYBASE':
+            case 'SQLSERVER':
+                //publishObject = GetDBObject(srcConnName, databaseName, objectType, objectName);
+                publishObject = FindDBObject(srcConnName, databaseName, objectType, objectName);
+                break;
+            default:
+                throw new Error('Does not support "'+dataSource+'" data source.');
+        }
+        if(publishObject != null)
+        {
+            publishObject["Click"]();
+           // publishObject["DblClick"]();
+            Delay(5000);
+        }
+        else
+        {
+            throw new Error(objectType +'"'+ objectName + '" does not exist!');
+        }
+        
+        publishObject["ClickR"]();
+        Delay(3000);
+        //select send to & begin publish
+        switch(objectType)
+        {
+          case 'Tables':
+              SendKeys(['[Down]', '[Enter]'], [9, 1]);
+              break;
+          case 'Views':
+              SendKeys(['[Down]', '[Enter]'], [8, 1]);
+              break;
+          default:
+              throw new Error('Does not support "'+objectType+'".');
+        }  
+        Delay(3000);
+        
+        bReturn = Publish["Publish"](nID, strSheetName);
+        if (bReturn)
+            Log["Message"]('Publish success!');
+        else
+            throw new Error('Publish failed!');
+        Log["Message"]('============================================');
+    }
+    catch(e)
+    {
+        bReturn = false;
+        Log["Error"](e["description"]);
+    }
+    finally
+    {
+        EndLogFolder();
+    }
+    return bReturn;
+}
+
+
+function test()
+{
+    PublishObjects(1);
+}
